@@ -12,4 +12,4 @@ class ConfigParser:
 		ConfigParser._file_system = file_system
 
 	def parse_config(self, config_file):
-		pass
+		content = ConfigParser._file_system.load_from(config_file)

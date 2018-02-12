@@ -2,10 +2,16 @@ from sys import exit, exc_info
 from os.path import dirname
 import json
 
+class ConfigValidator:
+	
+	@staticmethod
+	def validate_config(config, schema):
+		pass
+
 class ConfigParser:
 
 	_instance = None
-	_validator = None
+	_validator = ConfigValidator
 	_file_system = None
 	_schema_file = dirname(__file__) + "/schema/config.json"
 
@@ -39,6 +45,19 @@ class ConfigParser:
 		return content
 
 	def parse_config(self, config_file):
-		config = ConfigParser.fetch_content(config_file)
+		#Десериализация схемы и файла конфигурации
+		raw_config = ConfigParser.fetch_content(config_file)
 		schema = ConfigParser.fetch_content(ConfigParser._schema_file)
-		
+		#Валидация конфигурационного файла при помощи схемы
+		ConfigParser._validator.validate_config(raw_config, schema)
+		#Сборка объекта класса Config на основе конфигурационного файла
+		return Config(raw_config)
+
+class Config:
+	
+	def __init__(self, raw_config):
+		pass
+
+	def __str__(self):
+		return "Config object"
+

@@ -11,7 +11,6 @@ class FileSystem:
 		except EnvironmentError:
 			pass
 
-
 	@staticmethod
 	def load_from(file):
 		if isfile(file) and access(file, R_OK):

@@ -12,6 +12,9 @@ from parser.arg_parser import ArgParser
 from parser.config_parser import ConfigParser
 from parser.test_parser import TestParser
 
+#Импорт класса реализации процессора
+from processor.core import Processor
+
 #Импорт класса очереди для синхронизации потоков выполнения программы
 from queue import Queue
 
@@ -23,12 +26,18 @@ def main():
 	config = ConfigParser(FileSystem).parse_config(config_file)
 
 	#Создание очереди FIFO от парсера тестовых сценариев до процессора
-	from_parser = Queue()
+	to_processor = Queue()
 	#Создание очереди FIFO от процессора до логгера тестовых сценариев
-	from_processor = Queue()
+	to_logger = Queue()
 
 	#Создание и конфигурация парсера тестовых сценариев
-	test_parser = TestParser(FileSystem, tests_files, queue_to_processor=from_parser)
+	test_parser = TestParser(FileSystem, tests_files, queue=to_processor)
+
+	#Создание и конфигурация процессора
+	processor = Processor(FileSystem, config, queue=to_logger)
+
+	#Создание и конфигурация логгера тестовых сценариев
+	
 
 if __name__ == "__main__":
 	main()

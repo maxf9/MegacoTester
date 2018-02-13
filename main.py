@@ -40,5 +40,15 @@ def main():
 	#Создание и конфигурация логгера тестовых сценариев
 	test_logger = TestLogger(FileSystem, from_processor=queues[1])
 
+	#Запуск компонентов приложения
+	test_logger.start()
+	processor.start()
+	test_parser.start()
+
+	#Ожидание завершения работы компонентов приложения
+	test_parser.join()
+	processor.join()
+	test_logger.join()
+
 if __name__ == "__main__":
 	main()

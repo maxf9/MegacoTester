@@ -5,7 +5,7 @@ class ArgParser:
 	_instance = None
 	_arg_parser = ArgumentParser()
 
-	def __new__(cls):
+	def __new__(cls, *args, **kwargs):
 		if ArgParser._instance is None:
 			ArgParser._instance = object.__new__(cls)
 		return ArgParser._instance

@@ -15,7 +15,7 @@ class ConfigParser:
 	_file_system = None
 	_schema_file = dirname(__file__) + "/schema/config.json"
 
-	def __new__(cls, *args):
+	def __new__(cls, *args, **kwargs):
 		if ConfigParser._instance is None:
 			ConfigParser._instance = object.__new__(cls)
 		return ConfigParser._instance

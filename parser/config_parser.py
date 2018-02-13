@@ -54,9 +54,32 @@ class ConfigParser:
 		return Config(raw_config)
 
 class Config:
+
+	class Node:
+		
+		def __init__(self):
+			self.id = None
+			self.info = None
+			self.ip_address = None
+			self.port = None
+			self.mid = None
+			self.encoding = None
+			self.terms = None
+
+	class Connection:
+		
+		def __init__(self):
+			self.id = None
+			self.info = None
+			self.from_node = None
+			self.to_node = None
 	
 	def __init__(self, raw_config):
-		pass
+		self.log_dir = None
+		self.globals = None
+		self.dialplans = None
+		self.nodes = None
+		self.connections = None
 
 	def __str__(self):
 		return "Config object"

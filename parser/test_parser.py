@@ -10,10 +10,10 @@ class TestParser(Thread):
 			TestParser._instance = object.__new__(cls)
 		return TestParser._instance
 	
-	def __init__(self, file_system, tests_files, queue):
+	def __init__(self, file_system, tests_files, to_processor):
 		super().__init__()
 		self.tests_files =  tests_files
-		self.processor_queue = queue
+		self.processor_queue = to_processor
 		TestParser._file_system = file_system
 
 	def run(self):

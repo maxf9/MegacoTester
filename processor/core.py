@@ -11,9 +11,10 @@ class Processor(Thread):
 			Processor._instance = object.__new__(cls)
 		return Processor._instance
 
-	def __init__(self, file_system, config, queue):
+	def __init__(self, file_system, config, from_parser, to_logger):
 		super().__init__()
-		self.logger_queue = queue
+		self.parser_queue = from_parser
+		self.logger_queue = to_logger
 		Processor._file_system = file_system
 		Processor._config = config
 

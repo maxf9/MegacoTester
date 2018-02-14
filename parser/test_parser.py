@@ -1,5 +1,5 @@
 from threading import Thread
-from asyncio import get_event_loop, as_completed, sleep
+from asyncio import get_event_loop, as_completed
 
 class TestParser(Thread):
 
@@ -19,28 +19,40 @@ class TestParser(Thread):
 		TestParser._file_system = file_system
 
 	@staticmethod
-	async def load_content(file):
-		return TestParser._file_system.load_from(file)
+	async def load_file(file):
+		raw_content = TestParser._file_system.load_from(file)
+		if raw_content is None:
+			TestParser.load_file.cancel()
+		return raw_content
 
 	@staticmethod
 	async def decode_xml(raw_content):
 		pass
 
-	async def parse_test(self, file):
-		#Десериализация файла тестового сценария
-		raw_content = await TestParser.load_content(file)
+	@staticmethod
+	async def fetch_content(file):
+		#Загрузка файла тестового сценария
+		raw_content = await TestParser.load_file(file)
 		#Декодирование файла тестового сценария
 		content = await TestParser.decode_xml(raw_content)
+		return content
+
+	async def parse_test(self, file):
+		#Десериализация файла тестового сценария
+		content = await TestParser.fetch_content(file)
 		#Валидация теста
 		pass
 		#Парсинг теста
-		pass
+		test = None
+		return test
 
 	async def main_coro(self):
+		#Создание задач для обработчика
 		futures = [self.parse_test(file) for file in self.tests_files]
 		for future in as_completed(futures):
 			test = await future
-			#print(test)
+			#Постановка результата выполнения задачи в очередь к процессору
+			self.processor_queue.put(test, block=False)
 
 	def run(self):
 		#Запуск обработчика событий

@@ -1,5 +1,5 @@
 from threading import Thread
-from asyncio import get_event_loop, as_completed
+from asyncio import get_event_loop, as_completed, wait
 
 class TestParser(Thread):
 
@@ -52,7 +52,7 @@ class TestParser(Thread):
 		for future in as_completed(futures):
 			test = await future
 			#Постановка результата выполнения задачи в очередь к процессору
-			self.processor_queue.put(test, block=False)
+			self.processor_queue.put(test)
 
 	def run(self):
 		#Запуск обработчика событий

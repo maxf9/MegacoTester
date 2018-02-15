@@ -3,10 +3,17 @@ from asyncio import get_event_loop, as_completed
 from sys import exc_info
 import xml.etree.ElementTree as xml
 
+class TestValidator:
+	
+	@staticmethod
+	def validate_test(test, schema):
+		pass
+
 class TestParser(Thread):
 
 	_instance = None
 	_file_system = None
+	_validator = TestValidator
 	_event_loop = get_event_loop()
 
 	def __new__(cls, *args, **kwargs):
@@ -48,9 +55,9 @@ class TestParser(Thread):
 		content = await TestParser.fetch_content(file)
 		if content is None:
 			return content
-		#Валидация теста
-		pass
-		#Парсинг теста
+		#Валидация тестового сценария
+		TestParser._validator.validate_test(content, schema=None)
+		#Парсинг тестового сценария
 		test = None
 		return test
 

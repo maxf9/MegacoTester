@@ -1,5 +1,7 @@
 from threading import Thread
 from asyncio import get_event_loop, as_completed
+from sys import exc_info
+import xml.etree.ElementTree as xml
 
 class TestParser(Thread):
 
@@ -23,8 +25,13 @@ class TestParser(Thread):
 		return TestParser._file_system.load_from(file)
 
 	@staticmethod
-	async def decode_xml(raw_content):
-		pass
+	async def decode_xml(raw_content, file):
+		try:
+			decoded_content = xml.fromstring(raw_content)
+		except xml.ParseError:
+			decoded_content = None
+			print("Ошибка декодирования файла %s. %s" % (file, exc_info()[1]))
+		return decoded_content
 
 	@staticmethod
 	async def fetch_content(file):
@@ -33,7 +40,7 @@ class TestParser(Thread):
 		if raw_content is None:
 			return raw_content
 		#Декодирование файла тестового сценария
-		content = await TestParser.decode_xml(raw_content)
+		content = await TestParser.decode_xml(raw_content, file)
 		return content
 
 	async def parse_test(self, file):

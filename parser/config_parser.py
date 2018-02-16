@@ -1,12 +1,21 @@
 from sys import exit, exc_info
 from os.path import dirname
+from jsonschema import Draft4Validator
 import json
 
 class ConfigValidator:
 	
 	@staticmethod
 	def validate_config(config, schema):
-		pass
+		errors = sorted(Draft4Validator(schema).iter_errors(config), key=lambda e: e.path)
+		if errors:
+			ConfigValidator.print_errors(errors)
+			exit(1)
+
+	@staticmethod
+	def print_errors(errors):
+		for error in errors:
+			print(error)
 
 class ConfigParser:
 

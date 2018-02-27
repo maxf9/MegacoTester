@@ -1,5 +1,5 @@
-from os.path import isfile
-from os import access, R_OK
+from os.path import isfile, isdir
+from os import access, R_OK, X_OK
 
 class FileSystem:
 
@@ -17,3 +17,8 @@ class FileSystem:
 			with open(file, "r", encoding="utf-8") as f:
 				content = f.read()
 				return content
+
+	@staticmethod
+	def is_acceptable_directory(path):
+		if isdir(path) and access(path, X_OK):
+			return True

@@ -1,4 +1,5 @@
 from threading import Thread
+from processor.interpreter import Interpreter
 
 class Processor(Thread):
 

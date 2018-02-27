@@ -69,9 +69,23 @@ class ConfigParser:
 
 class Config:
 
+	_instance = None
+
+	def __new__(cls, *args, **kwargs):
+		if Config._instance is None:
+			Config._instance = object.__new__(cls)
+		return Config._instance
+	
+	def __init__(self, raw_config):
+		self.log_dir = raw_config["LogDirectory"]
+		self.globals = raw_config["Globals"]
+		self.dialplans = raw_config["Dialplans"]
+		self.nodes = [Config.create_component(fabric, type="Node") for fabric in raw_config["Nodes"]]
+		self.connections = [Config.create_component(fabric, type="Connection") for fabric in raw_config["Connections"]]
+
 	class Node:
 		
-		def __init__(self):
+		def __init__(self, fabric):
 			self.id = None
 			self.info = None
 			self.ip_address = None
@@ -80,20 +94,34 @@ class Config:
 			self.encoding = None
 			self.terms = None
 
+		def __str__(self):
+			return "Node: %s" % self.id
+
+		def __repr__(self):
+			return "Node: %s" % self.id
+
 	class Connection:
 		
-		def __init__(self):
+		def __init__(self, fabric):
 			self.id = None
 			self.info = None
 			self.from_node = None
 			self.to_node = None
-	
-	def __init__(self, raw_config):
-		self.log_dir = None
-		self.globals = None
-		self.dialplans = None
-		self.nodes = None
-		self.connections = None
+
+		def __str__(self):
+			return "Connection: %s" % self.id
+
+		def __repr__(self):
+			return "Connection: %s" % self.id
+
+	@staticmethod
+	def create_component(fabric, type):
+		component = None
+		if type == "Node":
+			component = Config.Node(fabric)
+		elif type == "Connection":
+			component = Config.Connection(fabric)
+		return component
 
 	def __str__(self):
 		return "Config object"

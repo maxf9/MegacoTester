@@ -80,19 +80,36 @@ class Config:
 		self.log_dir = raw_config["LogDirectory"]
 		self.globals = raw_config["Globals"]
 		self.dialplans = raw_config["Dialplans"]
-		self.nodes = [Config.create_component(fabric, type="Node") for fabric in raw_config["Nodes"]]
-		self.connections = [Config.create_component(fabric, type="Connection") for fabric in raw_config["Connections"]]
+		self.nodes = tuple(Config.create_component(fabric, type="Node") for fabric in raw_config["Nodes"])
+		self.connections = tuple(Config.create_component(fabric, type="Connection") for fabric in raw_config["Connections"])
 
 	class Node:
+
+		_custom_fields = ("info","mid","encoding","terms")
 		
 		def __init__(self, fabric):
-			self.id = None
+			self.id = fabric["id"]
 			self.info = None
-			self.ip_address = None
-			self.port = None
-			self.mid = None
-			self.encoding = None
-			self.terms = None
+			self.ip_address = fabric["ip_address"]
+			self.port = fabric["port"]
+			self.mid = "[%s]:%s" % (self.ip_address, self.port)
+			self.encoding = "full_text"
+			self.terms = tuple()
+			self.customize(fabric)
+
+		def customize(self, fabric):
+			for field in Config.Node._custom_fields:
+				try:
+					if field == "info":
+						self.info = fabric[field]
+					elif field == "mid":
+						self.mid = fabric[field]
+					elif field == "encoding":
+						self.encoding = fabric[field]
+					elif field == "terms":
+						self.terms = tuple(fabric[field])
+				except KeyError:
+					pass
 
 		def __str__(self):
 			return "Node: %s" % self.id
@@ -103,10 +120,17 @@ class Config:
 	class Connection:
 		
 		def __init__(self, fabric):
-			self.id = None
+			self.id = fabric["id"]
 			self.info = None
-			self.from_node = None
-			self.to_node = None
+			self.from_node = fabric["from_node"]
+			self.to_node = fabric["to_node"]
+			self.customize(fabric)
+
+		def customize(self, fabric):
+			try:
+				self.info = fabric["info"]
+			except KeyError:
+				pass
 
 		def __str__(self):
 			return "Connection: %s" % self.id

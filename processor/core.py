@@ -1,4 +1,5 @@
 from threading import Thread
+from queue import Queue
 from processor.interpreter import Interpreter
 
 class Processor(Thread):
@@ -16,8 +17,9 @@ class Processor(Thread):
 		super().__init__()
 		self.parser_queue = from_parser
 		self.logger_queue = to_logger
+		self._interpreter_queue = Queue()
 		Processor._file_system = file_system
-		Processor._interpreter = Interpreter(config)
+		Processor._interpreter = Interpreter(config, self._interpreter_queue)
 
 	def run(self):
 		pass

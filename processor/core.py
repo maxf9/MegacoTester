@@ -4,8 +4,8 @@ from processor.interpreter import Interpreter
 class Processor(Thread):
 
 	_instance = None
-	_config = None
 	_file_system = None
+	_interpreter = None
 
 	def __new__(cls, *args, **kwargs):
 		if Processor._instance is None:
@@ -17,7 +17,7 @@ class Processor(Thread):
 		self.parser_queue = from_parser
 		self.logger_queue = to_logger
 		Processor._file_system = file_system
-		Processor._config = config
+		Processor._interpreter = Interpreter(config)
 
 	def run(self):
 		pass

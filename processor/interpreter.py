@@ -1,4 +1,5 @@
 from multiprocessing import Process
+from processor.network import Network
 
 class Interpreter(Process):
 
@@ -9,5 +10,8 @@ class Interpreter(Process):
 			Interpreter._instance = object.__new__(cls)
 		return Interpreter._instance
 
-	def __init__(self):
+	def __init__(self, config):
 		super().__init__()
+
+	def run(self):
+		pass

@@ -6,6 +6,24 @@ import json
 class ConfigValidator:
 	
 	@staticmethod
+	def print_errors(errors):
+		for error in errors:
+			print(error)
+
+	@staticmethod
+	def is_unique_identiers(**sections):
+		indicator = True
+		for name,section in sections.items():
+			identifiers = set()
+			for item in section:
+				if item["id"] not in identifiers:
+					identifiers.add(item["id"])
+				else:
+					indicator = False
+					print("Объект '{name}' секции '{section}' имеет неуникальный идентификатор: {id}".format(name=item["name"],section=name,id=item["id"]))
+		return indicator
+
+	@staticmethod 
 	def validate_config(config, schema):
 		errors = sorted(Draft4Validator(schema).iter_errors(config), key=lambda e: e.path)
 		#Проверка наличия ошибок при валидации
@@ -16,11 +34,9 @@ class ConfigValidator:
 		if not ConfigParser.file_system.is_acceptable_directory(config["LogDirectory"]):
 			print("Directory \"%s\" is not acceptable log directory" % config["LogDirectory"])
 			exit(1)
-
-	@staticmethod
-	def print_errors(errors):
-		for error in errors:
-			print(error)
+		#Проверка уникальности идентификаторов
+		if not ConfigValidator.is_unique_identiers(Nodes=config["Nodes"], Connections=config["Connections"]):
+			exit(1)
 
 class ConfigParser:
 
@@ -85,11 +101,11 @@ class Config:
 
 	class Node:
 
-		_custom_fields = ("info","mid","encoding","terms")
+		_custom_fields = ("name","mid","encoding","terms")
 		
 		def __init__(self, fabric):
 			self.id = fabric["id"]
-			self.info = None
+			self.name = None
 			self.ip_address = fabric["ip_address"]
 			self.port = fabric["port"]
 			self.mid = "[%s]:%s" % (self.ip_address, self.port)
@@ -100,8 +116,8 @@ class Config:
 		def customize(self, fabric):
 			for field in Config.Node._custom_fields:
 				try:
-					if field == "info":
-						self.info = fabric[field]
+					if field == "name":
+						self.name = fabric[field]
 					elif field == "mid":
 						self.mid = fabric[field]
 					elif field == "encoding":
@@ -121,14 +137,14 @@ class Config:
 		
 		def __init__(self, fabric):
 			self.id = fabric["id"]
-			self.info = None
+			self.name = None
 			self.from_node = fabric["from_node"]
 			self.to_node = fabric["to_node"]
 			self.customize(fabric)
 
 		def customize(self, fabric):
 			try:
-				self.info = fabric["info"]
+				self.name = fabric["name"]
 			except KeyError:
 				pass
 

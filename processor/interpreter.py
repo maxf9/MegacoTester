@@ -1,5 +1,6 @@
 from multiprocessing import Process
 from processor.network import NetworkAdapter
+from sys import exit
 
 class Interpreter(Process):
 
@@ -22,11 +23,36 @@ class Interpreter(Process):
 		super().__init__()
 		self.processor_queue = to_processor
 		self._command_handlers = Interpreter._define_command_handlers()
-		Interpreter.build_variables_tree(config)
+		self._network_adapters = Interpreter._configure_adapters(config.connections, config.nodes)
+		Interpreter._build_variables_tree(config)
 
 	@staticmethod
-	def build_variables_tree(config):
+	def _build_variables_tree(config):
 		pass
+
+	@staticmethod
+	def fetch_item(id, items):
+		for item in items:
+			if item.id == id:
+				break
+		else:
+			print("")
+			exit(1)
+		return item
+
+	@staticmethod
+	def _configure_adapters(connections, nodes):
+		config_data = {}
+		for connection in connections:
+			if connection.from_node not in config_data:
+				config_data[connection.from_node] = [connection.id]
+			else:
+				config_data[connection.from_node] += [connection.id]
+		network_adapters = {}
+		for key,value in config_data.items():
+			network_adapters[tuple(value)] = NetworkAdapter(Interpreter.fetch_item(key, nodes),
+			*[Interpreter.fetch_item(Interpreter.fetch_item(i,connections).to_node, nodes) for i in value])
+		return network_adapters
 
 	@staticmethod
 	def _handle_variables(instructions):

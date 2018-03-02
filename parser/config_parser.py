@@ -134,7 +134,7 @@ class Config:
 			return "Node: %s" % self.id
 
 		def __repr__(self):
-			return "Node: %s" % self.id
+			return self.__str__()
 
 	class Connection:
 		
@@ -155,7 +155,7 @@ class Config:
 			return "Connection: %s" % self.id
 
 		def __repr__(self):
-			return "Connection: %s" % self.id
+			return self.__str__()
 
 	@staticmethod
 	def create_component(fabric, type):

@@ -101,7 +101,7 @@ class Config:
 
 	class Node:
 
-		_custom_fields = ("name","mid","encoding","terms")
+		_custom_fields = ("name","mid","encoding","terms","network_buffer")
 		
 		def __init__(self, fabric):
 			self.id = fabric["id"]
@@ -111,6 +111,7 @@ class Config:
 			self.mid = "[%s]:%s" % (self.ip_address, self.port)
 			self.encoding = "full_text"
 			self.terms = tuple()
+			self.network_buffer = 15000
 			self.customize(fabric)
 
 		def customize(self, fabric):
@@ -124,6 +125,8 @@ class Config:
 						self.encoding = fabric[field]
 					elif field == "terms":
 						self.terms = tuple(fabric[field])
+					elif field == "network_buffer":
+						self.network_buffer = fabric[field]
 				except KeyError:
 					pass
 

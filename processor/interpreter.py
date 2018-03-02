@@ -1,5 +1,5 @@
 from multiprocessing import Process
-from processor.network import Network
+from processor.network import NetworkAdapter
 
 class Interpreter(Process):
 

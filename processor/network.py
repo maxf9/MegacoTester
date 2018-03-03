@@ -11,10 +11,12 @@ class NetworkAdapter:
 	def _configure_socket(node):
 		sock = socket(AF_INET,SOCK_DGRAM)
 		sock.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
+		#print("from node", node)
 		return sock
 
 	@staticmethod
 	def _configure_routes(*nodes):
+		#print(nodes)
 		pass
 
 	def send(self, message):

@@ -23,6 +23,15 @@ class ConfigValidator:
 					print("Объект '{name}' секции '{section}' имеет неуникальный идентификатор: {id}".format(name=item["name"],section=name,id=item["id"]))
 		return indicator
 
+	@staticmethod
+	def is_acceptable_connections(connections):
+		indicator = True
+		for connection in connections:
+			if connection["from_node"] == connection["to_node"]:
+				indicator = False
+				print("Connection '{id}' имеет одинаковые идентификаторы 'from_node' и 'to_node'".format(id=connection["id"]))
+		return indicator
+
 	@staticmethod 
 	def validate_config(config, schema):
 		errors = sorted(Draft4Validator(schema).iter_errors(config), key=lambda e: e.path)
@@ -36,6 +45,9 @@ class ConfigValidator:
 			exit(1)
 		#Проверка уникальности идентификаторов
 		if not ConfigValidator.is_unique_identiers(Nodes=config["Nodes"], Connections=config["Connections"]):
+			exit(1)
+		#Проверка на отсутствие вырожденных соединений
+		if not ConfigValidator.is_acceptable_connections(config["Connections"]):
 			exit(1)
 
 class ConfigParser:

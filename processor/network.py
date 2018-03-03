@@ -5,15 +5,16 @@ class NetworkAdapter:
 	
 	def __init__(self, from_node, *to_nodes):
 		self._socket = NetworkAdapter._configure_socket(from_node)
-		self.routes = NetworkAdapter._configure_routes(*to_nodes)
+		self._routes = NetworkAdapter._configure_routes(*to_nodes)
 		self.buffer = from_node.network_buffer
 		self.node_id = from_node.id
+		print(self._socket)
+		print(self._routes)
 
 	@staticmethod
 	def _configure_socket(node):
 		try:
 			sock = socket(AF_INET, SOCK_DGRAM)
-			sock.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
 			sock.bind((node.ip_address,node.port))
 		except (OSError,IOError) as error_info:
 			print("Ошибка создания сокета для Node '{id}': {error}'".format(id=node.id, error=error_info))

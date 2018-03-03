@@ -1,4 +1,5 @@
 from socket import socket, AF_INET, SOCK_DGRAM, SOL_SOCKET, SO_REUSEADDR
+from sys import exit
 
 class NetworkAdapter:
 	
@@ -9,15 +10,18 @@ class NetworkAdapter:
 
 	@staticmethod
 	def _configure_socket(node):
-		sock = socket(AF_INET,SOCK_DGRAM)
-		sock.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
-		#print("from node", node)
+		try:
+			sock = socket(AF_INET, SOCK_DGRAM)
+			sock.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
+			sock.bind((node.ip_address,node.port))
+		except (OSError,IOError) as error_info:
+			print("Ошибка создания сокета для Node '{id}': {error}'".format(id=node.id, error=error_info))
+			exit(1)
 		return sock
 
 	@staticmethod
 	def _configure_routes(*nodes):
-		#print(nodes)
-		pass
+		print(nodes)
 
 	def send(self, message):
 		pass

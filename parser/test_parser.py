@@ -1,6 +1,5 @@
 from threading import Thread
 from asyncio import get_event_loop, as_completed
-from sys import exc_info
 import xml.etree.ElementTree as xml
 
 class TestValidator:
@@ -35,9 +34,9 @@ class TestParser(Thread):
 	async def decode_xml(raw_content, file):
 		try:
 			decoded_content = xml.fromstring(raw_content)
-		except xml.ParseError:
+		except xml.ParseError as error_info:
 			decoded_content = None
-			print("Ошибка декодирования файла %s. %s" % (file, exc_info()[1]))
+			print("Ошибка декодирования файла %s. %s" % (file, str(error_info)))
 		return decoded_content
 
 	@staticmethod
@@ -45,7 +44,7 @@ class TestParser(Thread):
 		#Загрузка файла тестового сценария
 		raw_content = await TestParser.load_file(file)
 		if raw_content is None:
-			return raw_content
+			return
 		#Декодирование файла тестового сценария
 		content = await TestParser.decode_xml(raw_content, file)
 		return content
@@ -54,12 +53,11 @@ class TestParser(Thread):
 		#Десериализация файла тестового сценария
 		content = await TestParser.fetch_content(file)
 		if content is None:
-			return content
+			return
 		#Валидация тестового сценария
 		TestParser._validator.validate_test(content, schema=None)
 		#Парсинг тестового сценария
-		test = None
-		return test
+		return content
 
 	async def main_coro(self):
 		#Создание задач для обработчика
@@ -67,8 +65,7 @@ class TestParser(Thread):
 		for future in as_completed(futures):
 			test = await future
 			#Постановка теста в очередь к процессору
-			if test:
-				self.processor_queue.put(test)
+			if test: self.processor_queue.put(test)
 
 	def run(self):
 		#Запуск обработчика событий

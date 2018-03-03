@@ -8,8 +8,6 @@ class NetworkAdapter:
 		self._routes = NetworkAdapter._configure_routes(*to_nodes)
 		self.buffer = from_node.network_buffer
 		self.node_id = from_node.id
-		print(self._socket)
-		print(self._routes)
 
 	@staticmethod
 	def _configure_socket(node):

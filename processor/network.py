@@ -6,7 +6,8 @@ class NetworkAdapter:
 	def __init__(self, from_node, *to_nodes):
 		self._socket = NetworkAdapter._configure_socket(from_node)
 		self.routes = NetworkAdapter._configure_routes(*to_nodes)
-		self.buffer = None
+		self.buffer = from_node.network_buffer
+		self.node_id = from_node.id
 
 	@staticmethod
 	def _configure_socket(node):
@@ -21,9 +22,9 @@ class NetworkAdapter:
 
 	@staticmethod
 	def _configure_routes(*nodes):
-		print(nodes)
+		return dict([(node.id, (node.ip_address,node.port)) for node in nodes]) 
 
-	def send(self, message):
+	def send(self, message, to_node):
 		pass
 
 	def recv(self):
@@ -33,7 +34,7 @@ class NetworkAdapter:
 		self._socket.close()
 
 	def __str__(self):
-		return "Network adapter"
+		return "Network adapter for Node '%s'" % self.node_id
 
 	def __repr__(self):
 		return self.__str__()

@@ -24,6 +24,7 @@ class Interpreter(Process):
 		self.processor_queue = to_processor
 		self._command_handlers = Interpreter._define_command_handlers()
 		self._network_adapters = Interpreter._configure_adapters(config.connections, config.nodes)
+		self._routes = Interpreter._configure_routes(config.connections)
 		Interpreter._build_variables_tree(config)
 
 	@staticmethod
@@ -36,7 +37,7 @@ class Interpreter(Process):
 			if item.id == id:
 				break
 		else:
-			print("")
+			print("Объект 'Node' с id=%s не найден в конфигурационном файле" % id)
 			exit(1)
 		return item
 
@@ -53,6 +54,10 @@ class Interpreter(Process):
 			network_adapters[tuple(value)] = NetworkAdapter(Interpreter.fetch_item(key, nodes),
 			*[Interpreter.fetch_item(Interpreter.fetch_item(i,connections).to_node, nodes) for i in value])
 		return network_adapters
+
+	@staticmethod
+	def _configure_routes(connections):
+		return dict([(connection.id, connection.to_node) for connection in connections])
 
 	@staticmethod
 	def _handle_variables(instructions):

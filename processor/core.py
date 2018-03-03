@@ -1,11 +1,10 @@
 from threading import Thread
-from queue import Queue
+from queue import Queue, Empty
 from processor.interpreter import Interpreter
 
 class Processor(Thread):
 
 	_instance = None
-	_file_system = None
 	_interpreter = None
 
 	def __new__(cls, *args, **kwargs):
@@ -13,14 +12,26 @@ class Processor(Thread):
 			Processor._instance = object.__new__(cls)
 		return Processor._instance
 
-	def __init__(self, file_system, config, from_parser, to_logger):
+	def __init__(self, config, from_parser, to_logger):
 		super().__init__()
 		self.parser_queue = from_parser
 		self.logger_queue = to_logger
 		self._interpreter_queue = Queue()
-		Processor._file_system = file_system
 		Processor._interpreter = Interpreter(config, self._interpreter_queue)
 
 	def run(self):
-		pass
+		#Запуск процесса интерпретатора
+		Processor._interpreter.start()
+		while True:
+			try:
+				frame = self.parser_queue.get(block=True, timeout=0.1)
+				if frame.header == "stop":
+					break
+				else:
+					self._interpreter_queue.put(frame)
+			except Empty:
+				continue
+		Processor._interpreter.join()
+
+
 	

@@ -20,12 +20,8 @@ from test_logger import TestLogger
 
 #Импорт класса очереди для синхронизации потоков выполнения программы
 from queue import Queue
-
-class Frame:
-
-	def __init__(self, header, data=None):
-		self.header = header
-		self.data = data
+#Импорт класса кадра для обмена сообщениями между потоками
+from frame import Frame
 
 def main():
 	#Парсинг аргументов командной строки
@@ -38,13 +34,13 @@ def main():
 	queues = [Queue() for i in range(2)]
 
 	#Создание и конфигурация парсера тестовых сценариев
-	test_parser = TestParser(FileSystem, Frame, tests_files, to_processor=queues[0])
+	test_parser = TestParser(FileSystem, Frame, tests_files, test_queue=queues[0], log_queue=queues[1])
 
 	#Создание и конфигурация процессора
-	processor = Processor(config, from_parser=queues[0], to_logger=queues[1])
+	processor = Processor(config, Frame, test_queue=queues[0], log_queue=queues[1])
 
 	#Создание и конфигурация логгера тестовых сценариев
-	test_logger = TestLogger(FileSystem, from_processor=queues[1])
+	test_logger = TestLogger(FileSystem, Frame, log_queue=queues[1])
 
 	#Запуск компонентов приложения
 	test_logger.start()

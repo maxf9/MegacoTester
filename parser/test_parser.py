@@ -21,10 +21,11 @@ class TestParser(Thread):
 			TestParser._instance = object.__new__(cls)
 		return TestParser._instance
 	
-	def __init__(self, file_system, frame, tests_files, to_processor):
+	def __init__(self, file_system, frame, tests_files, test_queue, log_queue):
 		super().__init__()
 		self.tests_files = tests_files
-		self.processor_queue = to_processor
+		self.test_queue = test_queue
+		self.log_queue = log_queue
 		TestParser._file_system = file_system
 		TestParser._frame = frame
 
@@ -52,13 +53,12 @@ class TestParser(Thread):
 		return content
 
 	async def parse_test(self, file):
-		#Десериализация файла тестового сценария
+		#Десериализация и декодирование тестового сценария
 		content = await TestParser.fetch_content(file)
 		if content is None:
 			return
 		#Валидация тестового сценария
 		TestParser._validator.validate_test(content, schema=None)
-		#Парсинг тестового сценария
 		return content
 
 	async def main_coro(self):
@@ -68,12 +68,13 @@ class TestParser(Thread):
 			test = await future
 			#Постановка теста в очередь к процессору
 			if test:
-				self.processor_queue.put(TestParser._frame("info",data=test))
+				self.test_queue.put(TestParser._frame(TestParser._frame.TEST, TestParser._frame.Test(test)))
 
 	def run(self):
 		#Запуск обработчика событий
 		TestParser._event_loop.run_until_complete(self.main_coro())
 		#Остановка обработчика событий
 		TestParser._event_loop.close()
-		#Отправка стопового кадра
-		self.processor_queue.put(TestParser._frame("stop"))
+		#Отправка стоповых кадров по завершению парсинга тестовых сценариев
+		self.log_queue.put(TestParser._frame(TestParser._frame.STOP))
+		self.test_queue.put(TestParser._frame(TestParser._frame.STOP))

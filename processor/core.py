@@ -5,6 +5,7 @@ from processor.interpreter import Interpreter
 class Processor(Thread):
 
 	_instance = None
+	_frame = None
 	_interpreter = None
 
 	def __new__(cls, *args, **kwargs):
@@ -12,26 +13,29 @@ class Processor(Thread):
 			Processor._instance = object.__new__(cls)
 		return Processor._instance
 
-	def __init__(self, config, from_parser, to_logger):
+	def __init__(self, config, frame, test_queue, log_queue):
 		super().__init__()
-		self.parser_queue = from_parser
-		self.logger_queue = to_logger
-		self._interpreter_queue = Queue()
-		Processor._interpreter = Interpreter(config, self._interpreter_queue)
+		self.test_queue = test_queue
+		self.log_queue = log_queue
+		Processor._frame = frame
+		Processor._interpreter = Interpreter(config)
+
+	def execute_test(self, scenario):
+		pass
 
 	def run(self):
-		#Запуск процесса интерпретатора
-		Processor._interpreter.start()
+		#Запуск интерпретации тестовых сценариев
 		while True:
 			try:
-				frame = self.parser_queue.get(block=True, timeout=0.1)
-				if frame.header == "stop":
+				frame = self.test_queue.get(block=True, timeout=0.1)
+				if frame.header == Processor._frame.STOP:
 					break
 				else:
-					self._interpreter_queue.put(frame)
+					self.execute_test(frame.payload)
 			except Empty:
 				continue
-		Processor._interpreter.join()
+		#Отправка стопового кадра по завершению интерпретации
+		self.log_queue.put(Processor._frame(Processor._frame.STOP))
 
 
 	

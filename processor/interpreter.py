@@ -1,8 +1,7 @@
-from multiprocessing import Process
 from processor.network import NetworkAdapter
 from sys import exit
 
-class Interpreter(Process):
+class Interpreter:
 
 	_instance = None
 	_variables_tree = None
@@ -19,9 +18,7 @@ class Interpreter(Process):
 			Interpreter._instance = object.__new__(cls)
 		return Interpreter._instance
 
-	def __init__(self, config, to_processor):
-		super().__init__()
-		self.processor_queue = to_processor
+	def __init__(self, config):
 		self._command_handlers = Interpreter._define_command_handlers()
 		self._network_adapters = Interpreter._configure_adapters(config.connections, config.nodes)
 		self._routes = Interpreter._configure_routes(config.connections)
@@ -75,5 +72,5 @@ class Interpreter(Process):
 	def _handle_action(instructions):
 		pass
 
-	def run(self):
+	def execute(self, scenario):
 		pass

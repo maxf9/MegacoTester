@@ -33,8 +33,7 @@ class TestParser(Thread):
 	async def load_file(file):
 		return TestParser._file_system.load_from(file)
 
-	@staticmethod
-	async def decode_xml(raw_content, file):
+	async def decode_xml(self, raw_content, file):
 		try:
 			decoded_content = xml.fromstring(raw_content)
 		except xml.ParseError as error_info:
@@ -46,8 +45,7 @@ class TestParser(Thread):
 				                                 	                      success=False)))
 		return decoded_content
 
-	@staticmethod
-	async def fetch_content(file):
+	async def fetch_content(self, file):
 		#Загрузка файла тестового сценария
 		raw_content = await TestParser.load_file(file)
 		if raw_content is None:
@@ -58,12 +56,12 @@ class TestParser(Thread):
 				                                 	                      success=False)))
 			return
 		#Декодирование файла тестового сценария
-		content = await TestParser.decode_xml(raw_content, file)
+		content = await self.decode_xml(raw_content, file)
 		return content
 
 	async def parse_test(self, file):
 		#Десериализация и декодирование тестового сценария
-		content = await TestParser.fetch_content(file)
+		content = await self.fetch_content(file)
 		if content is None:
 			return
 		#Валидация тестового сценария

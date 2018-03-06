@@ -18,6 +18,10 @@ class TestLogger(Thread):
 		TestLogger._file_system = file_system
 		TestLogger._frame = frame
 
+	@staticmethod
+	def handle_report(report):
+		print(report.log)
+
 	def run(self):
 		stop_counter = 0
 		while True:
@@ -26,5 +30,7 @@ class TestLogger(Thread):
 				if frame.header == TestLogger._frame.STOP:
 					stop_counter += 1
 					if stop_counter == 2: break
+				else:
+					TestLogger.handle_report(frame.payload)
 			except Empty:
 				continue

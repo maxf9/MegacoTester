@@ -1,15 +1,12 @@
 from os.path import isfile, isdir
-from os import access, R_OK, X_OK
+from os import access, listdir, makedirs, remove, R_OK, X_OK
 
 class FileSystem:
 
 	@staticmethod
 	def dump_to(file, content):
-		try:
-			with open(file, "w", encoding="utf-8") as f:
-				f.write(content)
-		except EnvironmentError:
-			pass
+		with open(file, "w", encoding="utf-8") as f:
+			f.write(content)
 
 	@staticmethod
 	def load_from(file):
@@ -17,6 +14,18 @@ class FileSystem:
 			with open(file, "r", encoding="utf-8") as f:
 				content = f.read()
 				return content
+
+	@staticmethod
+	def create_dir(path):
+		if isdir(path):
+			FileSystem._clear_dir(path)
+		else:
+			makedirs(path)
+
+	@staticmethod
+	def _clear_dir(path):
+		for file in listdir(path):
+			if isfile(path + "/" + file): remove(path + "/" + file)
 
 	@staticmethod
 	def is_acceptable_directory(path):

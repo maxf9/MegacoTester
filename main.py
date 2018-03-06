@@ -40,7 +40,7 @@ def main():
 	processor = Processor(config, Frame, test_queue=queues[0], log_queue=queues[1])
 
 	#Создание и конфигурация логгера тестовых сценариев
-	test_logger = TestLogger(FileSystem, Frame, log_queue=queues[1])
+	test_logger = TestLogger(FileSystem, Frame, log_dir=config.log_dir, log_queue=queues[1])
 
 	#Запуск компонентов приложения
 	test_logger.start()

@@ -20,7 +20,7 @@ class Processor(Thread):
 		Processor._frame = frame
 		Processor._interpreter = Interpreter(config)
 
-	def execute_test(self, scenario):
+	def execute_test(self, test):
 		pass
 
 	def run(self):

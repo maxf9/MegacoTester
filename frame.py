@@ -40,9 +40,9 @@ class Frame:
 			self.log = log
 
 		def __str__(self):
-			if self.action == Report.PARSE:
+			if self.action == Frame.Report.PARSE:
 				return "PARSE Report"
-			elif self.action == Report.EXECUTE:
+			elif self.action == Frame.Report.EXECUTE:
 				return "EXECUTE Report"
 
 		def __repr__(self):

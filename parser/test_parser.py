@@ -39,7 +39,11 @@ class TestParser(Thread):
 			decoded_content = xml.fromstring(raw_content)
 		except xml.ParseError as error_info:
 			decoded_content = None
-			print("Ошибка декодирования файла %s. %s" % (file, str(error_info)))
+			#Отправка отчета об ошибке декодирования файла
+			self.log_queue.put(TestParser._frame(TestParser._frame.REPORT, 
+				                                 TestParser._frame.Report(TestParser._frame.Report.PARSE,
+				                                 	                      log="Файл '%s' имеет неправильный формат: %s" % (file, str(error_info)),
+				                                 	                      success=False)))
 		return decoded_content
 
 	@staticmethod
@@ -47,6 +51,11 @@ class TestParser(Thread):
 		#Загрузка файла тестового сценария
 		raw_content = await TestParser.load_file(file)
 		if raw_content is None:
+			#Отправка отчета об ошибке загрузки файла
+			self.log_queue.put(TestParser._frame(TestParser._frame.REPORT, 
+				                                 TestParser._frame.Report(TestParser._frame.Report.PARSE,
+				                                 	                      log="Файл '%s' не существует или нет прав доступа" % file,
+				                                 	                      success=False)))
 			return
 		#Декодирование файла тестового сценария
 		content = await TestParser.decode_xml(raw_content, file)
@@ -59,6 +68,11 @@ class TestParser(Thread):
 			return
 		#Валидация тестового сценария
 		TestParser._validator.validate_test(content, schema=None)
+		#Отправка отчета об успешном парсинге тестового сценария
+		self.log_queue.put(TestParser._frame(TestParser._frame.REPORT, 
+				                             TestParser._frame.Report(TestParser._frame.Report.PARSE,
+				                                 	                  log="Файл '%s' успешно прошел парсинг" % file,
+				                                 	                  success=True)))
 		return content
 
 	async def main_coro(self):
@@ -68,7 +82,8 @@ class TestParser(Thread):
 			test = await future
 			#Постановка теста в очередь к процессору
 			if test:
-				self.test_queue.put(TestParser._frame(TestParser._frame.TEST, TestParser._frame.Test(test)))
+				self.test_queue.put(TestParser._frame(TestParser._frame.TEST, 
+					                                  TestParser._frame.Test("Test_%s_%s" % (number,test.attrib["name"].replace(" ","_")), test)))
 
 	def run(self):
 		#Запуск обработчика событий

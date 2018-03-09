@@ -21,7 +21,11 @@ class Processor(Thread):
 		Processor._interpreter = Interpreter(config)
 
 	def execute_test(self, test):
-		pass
+		#Выполнение тестового сценария интерпретатором
+		result,log = Processor._interpreter.execute(test.scenario)
+		#Отправка отчета о выполнении теста
+		self.log_queue.put(Processor._frame(Processor._frame.REPORT, 
+				                            Processor._frame.Report(Processor._frame.Report.EXECUTE, result, log, test.name)))
 
 	def run(self):
 		#Запуск интерпретации тестовых сценариев

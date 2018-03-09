@@ -73,4 +73,4 @@ class Interpreter:
 		pass
 
 	def execute(self, scenario):
-		pass
+		return (False, "SSSSSSSSSSSSSS")

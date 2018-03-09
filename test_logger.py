@@ -34,7 +34,7 @@ class TestLogger(Thread):
 			else:
 				self._parse_log["failure"] += [report.log + "\n"]
 		elif report.action == TestLogger._frame.Report.EXECUTE:
-			test_log = "EXECUTE STATUS: SUCCESS\n\n" if report.success else "EXECUTE STATUS: FAILURE\n\n" + report.log
+			test_log = ("EXECUTE STATUS: SUCCESS\n\n" if report.success else "EXECUTE STATUS: FAILURE\n\n") + report.log
 			TestLogger._file_system.dump_to(self.log_dir + "/" + "results" + "/" + report.test_name + ".log", test_log)
 
 	def run(self):

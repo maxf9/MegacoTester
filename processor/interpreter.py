@@ -4,12 +4,11 @@ from sys import exit
 class Interpreter:
 
 	_instance = None
-	_variables_tree = None
+	_global_variables = None
 
-	@staticmethod
-	def _define_command_handlers():
-		return { "Variables" : Interpreter._handle_variables,
-		         "send" : Interpreter._handle_send,
+	def _define_command_handlers(self):
+		return { "variables" : self._handle_variables,
+		         "send" : self._handle_send,
 		         "recv" : Interpreter._handle_recv,
 		         "action" : Interpreter._handle_action }
 
@@ -19,9 +18,10 @@ class Interpreter:
 		return Interpreter._instance
 
 	def __init__(self, config):
-		self._command_handlers = Interpreter._define_command_handlers()
+		self._command_handlers = self._define_command_handlers()
 		self._network_adapters = Interpreter._configure_adapters(config.connections, config.nodes)
 		self._routes = Interpreter._configure_routes(config.connections)
+		self._local_variables = None
 		Interpreter._build_variables_tree(config)
 
 	@staticmethod
@@ -56,21 +56,33 @@ class Interpreter:
 	def _configure_routes(connections):
 		return dict([(connection.id, connection.to_node) for connection in connections])
 
-	@staticmethod
-	def _handle_variables(instructions):
-		pass
+	def _handle_variables(self, instruction):
+		self._local_variables.update(instruction.attrib)
+		return (True, "Переменные %s объявлены в локальном пространстве имен\n" % str(self._local_variables))
 
 	@staticmethod
-	def _handle_recv(instructions):
-		pass
+	def _handle_recv(instruction):
+		return (True, "")
+
+	def _handle_send(self, instruction):
+		connection = int(instruction.attrib["connection"])
+		return (True, "")
 
 	@staticmethod
-	def _handle_send(instructions):
-		pass
-
-	@staticmethod
-	def _handle_action(instructions):
-		pass
+	def _handle_action(instruction):
+		return (True, "")
 
 	def execute(self, scenario):
-		return (False, "SSSSSSSSSSSSSS")
+		log = ""
+		#Установка локального пространства имен
+		self._local_variables = {}
+		#Выполнение инструкций сценария
+		for instruction in scenario:
+			try:
+				instruction_result, instruction_log = self._command_handlers[instruction.tag](instruction)
+				log += instruction_log
+				if not instruction_result:
+					return (False, log)
+			except KeyError:
+				return (False, log + "Неверная инструкция '%s'" % instruction.tag)
+		return (True, log)

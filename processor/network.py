@@ -1,4 +1,5 @@
 from socket import socket, AF_INET, SOCK_DGRAM, SOL_SOCKET, SO_REUSEADDR
+from socket import timeout as sock_timeout
 from sys import exit
 
 class NetworkAdapter:
@@ -24,10 +25,23 @@ class NetworkAdapter:
 		return dict([(node.id, (node.ip_address,node.port)) for node in nodes]) 
 
 	def send(self, message, to_node):
-		pass
+		try:
+			self._socket.sendto(message.encode(), self._routes[to_node])
+		except (OSError,IOError) as error_info:
+			return (False, "Ошибка отправки сообщения: %s\n" % str(error_info))
+		return (True, "Сообщение успешно отправлено\n")
 
-	def recv(self):
-		pass
+	def recv(self, from_node, timeout):
+		#Установка таймаута на прием сообщения
+		self._socket.settimeout(timeout/1000)
+		try:
+			data, node = self._socket.recvfrom(self.buffer)
+		except (OSError,IOError,sock_timeout) as error_info:
+			return (False, "Ошибка приема сообщения: '%s'\n" % str(error_info), None)
+		else:
+			if node != self._routes[from_node]:
+				return (False, "Ошибка приема сообщения: неверный адрес удаленного хоста '%s:%s'\n" % node, None)
+		return (True, "Сообщение успешно принято\n", data.decode())
 
 	def close(self):
 		self._socket.close()

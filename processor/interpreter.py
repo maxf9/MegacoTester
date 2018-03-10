@@ -9,7 +9,7 @@ class Interpreter:
 	def _define_command_handlers(self):
 		return { "variables" : self._handle_variables,
 		         "send" : self._handle_send,
-		         "recv" : Interpreter._handle_recv,
+		         "recv" : self._handle_recv,
 		         "action" : Interpreter._handle_action }
 
 	def __new__(cls, *args, **kwargs):
@@ -56,17 +56,34 @@ class Interpreter:
 	def _configure_routes(connections):
 		return dict([(connection.id, connection.to_node) for connection in connections])
 
+	def _get_network_adapter(self, connection):
+		for connections in self._network_adapters:
+			if connection in connections:
+				network_adapter = self._network_adapters[connections]
+				return network_adapter
+
 	def _handle_variables(self, instruction):
 		self._local_variables.update(instruction.attrib)
 		return (True, "Переменные %s объявлены в локальном пространстве имен\n" % str(self._local_variables))
 
-	@staticmethod
-	def _handle_recv(instruction):
-		return (True, "")
+	def _handle_recv(self, instruction):
+		connection = int(instruction.attrib["connection"])
+		#Поиск сетевого адаптера по идентификатору соединения
+		network_adapter = self._get_network_adapter(connection)
+		if network_adapter is None:
+			return (False, "Recv: неправильный идентификатор соединения '%s'\n" % connection)
+		#Прием сообщения сетевым адаптером
+		result, log, data = network_adapter.recv(self._routes[connection], timeout=int(instruction.attrib["timeout"]))
+		return(result, log)
 
 	def _handle_send(self, instruction):
 		connection = int(instruction.attrib["connection"])
-		return (True, "")
+		#Поиск сетевого адаптера по идентификатору соединения
+		network_adapter = self._get_network_adapter(connection)
+		if network_adapter is None:
+			return (False, "Send: неправильный идентификатор соединения '%s'\n" % connection)
+		#Отправка сообщения удаленному узлу
+		return network_adapter.send(instruction.text, to_node=self._routes[connection])
 
 	@staticmethod
 	def _handle_action(instruction):

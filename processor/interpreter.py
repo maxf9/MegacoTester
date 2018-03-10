@@ -63,12 +63,35 @@ class Interpreter:
 				network_adapter = self._network_adapters[connections]
 				return network_adapter
 
-	def _replace_variables(self, message):
-		#Получение локальных и глобальных переменных сообщения 
-		local_variables = set(findall(r"\[\$[A-Za-z0-9_]+\]", message))
-		global_variables = set(findall(r"\[\$\$[A-Za-z0-9_]+\]", message))
-		#variable = search(r"[A-Za-z0-9_]+", variable).group(0)
-		return message
+	@staticmethod
+	def _replace_global_variables(message):
+		raw_variables = set(findall(r"\[\$\$[A-Za-z0-9_]+\]", message))
+		for raw_variable in raw_variables:
+			variable = search(r"[A-Za-z0-9_]+", raw_variable).group(0)
+			if variable in Interpreter._global_variables:
+				message = message.replace(raw_variable, Interpreter._global_variables[variable])
+			else:
+				return (False, "Переменная '%s' не объявлена в глобальном пространстве имен\n" % variable)
+		return (True, message)
+
+	def _replace_local_variables(self, message):
+		raw_variables = set(findall(r"\[\$[A-Za-z0-9_]+\]", message))
+		for raw_variable in raw_variables:
+			variable = search(r"[A-Za-z0-9_]+", raw_variable).group(0)
+			if variable in self._local_variables:
+				message = message.replace(raw_variable, self._local_variables[variable])
+			else:
+				return (False, "Переменная '%s' не объявлена в локальном пространстве имен\n" % variable)
+		return (True, message)
+
+	def _replace_variables(self, raw_message):
+		#Замена глобальных переменных
+		result, data = Interpreter._replace_global_variables(raw_message)
+		if not result: return (False, data)
+		#Замена локальных переменных
+		result, data = self._replace_local_variables(data)
+		if not result: return (False, data)
+		return (True, data)
 
 	def _handle_variables(self, instruction):
 		self._local_variables.update(instruction.attrib)
@@ -91,7 +114,9 @@ class Interpreter:
 		if network_adapter is None:
 			return (False, "Send: неправильный идентификатор соединения '%s'\n" % connection)
 		#Подстановка значений переменных в сообщение
-		message = self._replace_variables(instruction.text)
+		result, message = self._replace_variables(instruction.text)
+		if not result:
+			return (False, message)
 		#Отправка сообщения удаленному узлу
 		return network_adapter.send(message, to_node=self._routes[connection])
 

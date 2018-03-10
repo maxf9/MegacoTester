@@ -20,7 +20,7 @@ class Processor(Thread):
 		Processor._frame = frame
 		Processor._interpreter = Interpreter(config)
 
-	def execute_test(self, test):
+	def _execute_test(self, test):
 		#Выполнение тестового сценария интерпретатором
 		result,log = Processor._interpreter.execute(test.scenario)
 		#Отправка отчета о выполнении теста
@@ -35,9 +35,11 @@ class Processor(Thread):
 				if frame.header == Processor._frame.STOP:
 					break
 				else:
-					self.execute_test(frame.payload)
+					self._execute_test(frame.payload)
 			except Empty:
 				continue
+		#Остановка работы всех сетевых адаптеров
+		Processor._interpreter.stop_all_network_adapters()
 		#Отправка стопового кадра по завершению интерпретации
 		self.log_queue.put(Processor._frame(Processor._frame.STOP))
 

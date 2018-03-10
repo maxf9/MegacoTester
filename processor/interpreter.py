@@ -53,6 +53,10 @@ class Interpreter:
 			*[Interpreter.fetch_item(Interpreter.fetch_item(i,connections).to_node, nodes) for i in value])
 		return network_adapters
 
+	def stop_all_network_adapters(self):
+		for network_adapter in self._network_adapters.values():
+			network_adapter.close()
+
 	@staticmethod
 	def _configure_routes(connections):
 		return dict([(connection.id, connection.to_node) for connection in connections])

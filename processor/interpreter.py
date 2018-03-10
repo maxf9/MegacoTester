@@ -1,4 +1,5 @@
 from processor.network import NetworkAdapter
+from re import findall, search
 from sys import exit
 
 class Interpreter:
@@ -22,11 +23,11 @@ class Interpreter:
 		self._network_adapters = Interpreter._configure_adapters(config.connections, config.nodes)
 		self._routes = Interpreter._configure_routes(config.connections)
 		self._local_variables = None
-		Interpreter._build_variables_tree(config)
+		Interpreter._build_global_variables_tree(config)
 
 	@staticmethod
-	def _build_variables_tree(config):
-		pass
+	def _build_global_variables_tree(config):
+		Interpreter._global_variables = config.globals
 
 	@staticmethod
 	def fetch_item(id, items):
@@ -62,6 +63,13 @@ class Interpreter:
 				network_adapter = self._network_adapters[connections]
 				return network_adapter
 
+	def _replace_variables(self, message):
+		#Получение локальных и глобальных переменных сообщения 
+		local_variables = set(findall(r"\[\$[A-Za-z0-9_]+\]", message))
+		global_variables = set(findall(r"\[\$\$[A-Za-z0-9_]+\]", message))
+		#variable = search(r"[A-Za-z0-9_]+", variable).group(0)
+		return message
+
 	def _handle_variables(self, instruction):
 		self._local_variables.update(instruction.attrib)
 		return (True, "Переменные %s объявлены в локальном пространстве имен\n" % str(self._local_variables))
@@ -82,8 +90,10 @@ class Interpreter:
 		network_adapter = self._get_network_adapter(connection)
 		if network_adapter is None:
 			return (False, "Send: неправильный идентификатор соединения '%s'\n" % connection)
+		#Подстановка значений переменных в сообщение
+		message = self._replace_variables(instruction.text)
 		#Отправка сообщения удаленному узлу
-		return network_adapter.send(instruction.text, to_node=self._routes[connection])
+		return network_adapter.send(message, to_node=self._routes[connection])
 
 	@staticmethod
 	def _handle_action(instruction):

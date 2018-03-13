@@ -1,5 +1,6 @@
 from processor.network import NetworkAdapter
-from re import findall, search
+from re import findall, search, compile
+from time import sleep
 from sys import exit
 
 class Interpreter:
@@ -11,7 +12,10 @@ class Interpreter:
 		return { "variables" : self._handle_variables,
 		         "send" : self._handle_send,
 		         "recv" : self._handle_recv,
-		         "action" : Interpreter._handle_action }
+		         "action" : self._handle_action,
+		         "catch" : self._handle_catch,
+		         "nop" : self._handle_nop,
+		         "pause" : Interpreter._handle_pause }
 
 	def __new__(cls, *args, **kwargs):
 		if Interpreter._instance is None:
@@ -102,6 +106,7 @@ class Interpreter:
 		return (True, "Переменные %s объявлены в локальном пространстве имен\n" % str(self._local_variables))
 
 	def _handle_recv(self, instruction):
+		#Получение идентификатора соединения по атрибуту объекта
 		connection = int(instruction.attrib["connection"])
 		#Поиск сетевого адаптера по идентификатору соединения
 		network_adapter = self._get_network_adapter(connection)
@@ -109,7 +114,15 @@ class Interpreter:
 			return (False, "Recv: неправильный идентификатор соединения '%s'\n" % connection)
 		#Прием сообщения сетевым адаптером
 		result, log, data = network_adapter.recv(self._routes[connection], timeout=int(instruction.attrib["timeout"]))
-		return(result, log)
+		if not result:
+			return (False, log)
+		#Исполнение вложенных инструкций
+		for action in instruction:
+			result, action_log = self._command_handlers[action.tag](action, data)
+			log += action_log
+			if not result:
+				return (False, log)
+		return(True, log)
 
 	def _handle_send(self, instruction):
 		connection = int(instruction.attrib["connection"])
@@ -124,8 +137,56 @@ class Interpreter:
 		#Отправка сообщения удаленному узлу
 		return network_adapter.send(message, to_node=self._routes[connection])
 
+	def _handle_action(self, instructions, data=None):
+		log = ""
+		#Исполнение вложенных инструкций
+		for instruction in instructions:
+			result, action_log = self._command_handlers[instruction.tag](instruction, data)
+			log += action_log
+			if not result:
+				return (False, log)
+		return (True, log)
+
+	def _handle_catch(self, instruction, data):
+		#Получение значений атрибутов инструкции
+		regexp = compile(instruction.attrib["regexp"])
+		overlap = int(instruction.attrib["overlap"])
+		check_it = True if instruction.attrib["check_it"] == "true" else False
+		variables = instruction.attrib["assign_to"].split(",")
+		#Нахождение всех возможных совпадений с регулярным выражением
+		values = regexp.findall(data)
+		#Обработка результатов и запись переменных в локальное пространство имен
+		if not values:
+			if check_it:
+				return (False, "По регулярному выражению '%s' не найдено совпадений\n" % regexp)
+			else:
+				for variable in variables:
+				    self._local_variables[variable] = ""
+		elif overlap < len(values):
+			overlapped = values[overlap]
+			if type(overlapped) == str:
+				for variable in variables:
+					self._local_variables[variable] = overlapped
+			else:
+				for variable in variables:
+					pass #запись множества значений в несколько переменных
+		else:
+			return (False, "Невозможно извлечь совпадение по данному полю overlap: '%s'\n" % overlap)
+		return (True, "Действие 'catch' успешно обработано\n")
+
 	@staticmethod
-	def _handle_action(instruction):
+	def _handle_pause(instruction):
+		timeout = int(instruction.attrib["timeout"]) / 1000
+		sleep(timeout)
+		return (True, "Пауза на %s миллисекунд\n" % timeout)
+
+	def _handle_nop(self, instructions):
+		return (True, "")
+
+	def _handle_strcmp(self, instruction):
+		return (True, "")
+
+	def _handle_print(self, instruction):
 		return (True, "")
 
 	def execute(self, scenario):

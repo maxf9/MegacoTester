@@ -1,5 +1,6 @@
 from threading import Thread
 from asyncio import get_event_loop, as_completed
+from parser.scenario import Scenario
 import xml.etree.ElementTree as xml
 
 class TestValidator:

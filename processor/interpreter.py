@@ -1,5 +1,6 @@
 from processor.network import NetworkAdapter
 from re import findall, search, compile
+from threading import Event
 from time import sleep
 from sys import exit
 
@@ -12,8 +13,12 @@ class Interpreter:
 		return { "variables" : self._handle_variables,
 		         "send" : self._handle_send,
 		         "recv" : self._handle_recv,
-		         "action" : self._handle_action,
+		         "actions" : self._handle_actions,
 		         "catch" : self._handle_catch,
+		         "compare" : self._handle_compare,
+		         "assign" : self._handle_assign,
+		         "print" : self._handle_print,
+		         "exit" : self._handle_exit,
 		         "nop" : self._handle_nop,
 		         "pause" : Interpreter._handle_pause }
 
@@ -27,6 +32,7 @@ class Interpreter:
 		self._network_adapters = Interpreter._configure_adapters(config.connections, config.nodes)
 		self._routes = Interpreter._configure_routes(config.connections)
 		self._local_variables = None
+		self._correct_exit_flag = Event()
 		Interpreter._build_global_variables_tree(config)
 
 	@staticmethod
@@ -137,7 +143,7 @@ class Interpreter:
 		#Отправка сообщения удаленному узлу
 		return network_adapter.send(message, to_node=self._routes[connection])
 
-	def _handle_action(self, instructions, data=None):
+	def _handle_actions(self, instructions, data=None):
 		log = ""
 		#Исполнение вложенных инструкций
 		for instruction in instructions:
@@ -181,25 +187,85 @@ class Interpreter:
 		return (True, "Пауза на %s миллисекунд\n" % timeout)
 
 	def _handle_nop(self, instructions):
-		return (True, "")
+		log = ""
+		#Исполнение вложенных инструкций
+		for instruction in instructions:
+			result, action_log = self._command_handlers[instruction.tag](instruction)
+			log += action_log
+			if not result:
+				return (False, log)
+		return (True, log)
 
-	def _handle_strcmp(self, instruction):
-		return (True, "")
+	def _handle_compare(self, instruction, *args):
+		#Получение значений атрибутов инструкции
+		result, first_group = self._replace_variables(instruction.attrib["first"])
+		if not result:
+			return (False, first_group)
+		result, second_group = self._replace_variables(instruction.attrib["second"])
+		if not result:
+			return (False, second_group)
+		#Формирование групп значений переменных для попарного сравнения
+		first_group = first_group.split(",")
+		second_group = second_group.split(",")
+		#Группы сравнения должны иметь одинаковое количество переменных
+		if len(first_group) != len(second_group):
+			return (False, "Группы сравнения имеют разное количество переменных\n")
+		#Попарное сравнение значений переменных
+		log = ""
+		for i in range(len(first_group)):
+			if first_group[i] != second_group[i]:
+				#Выполнение вложенных инструкций при неравенстве значений переменных
+				for action in instruction:
+					result, action_log = self._command_handlers[action.tag](action)
+					log += action_log
+					if not result:
+						return (False, "Сравнение переменных неуспешно\n" + log)
+				return (False, "Сравнение переменных неуспешно\n" + log)
+		return (True, "Сравнение переменных прошло успешно\n")
 
-	def _handle_print(self, instruction):
-		return (True, "")
+	def _handle_assign(self, instruction, *args):
+		#Получение значений атрибутов инструкции
+		result, value = self._replace_variables(instruction.attrib["value"])
+		if not result:
+			return (False, value)
+		variables = instruction.attrib["to"].split(",")
+		#Объявление переменных в локальном пространстве имен
+		for variable in variables:
+			self._local_variables[variable] = value
+		return (True, "Переменные успешно объявлены в локальном пространстве имен\n")
+
+	def _handle_print(self, instruction, *args):
+		result, text = self._replace_variables(instruction.attrib["text"])
+		if not result:
+			return (False, text + "\n")
+		return (True, text + "\n")
+
+	def _handle_exit(self, instruction, *args):
+		#Получение значений атрибутов инструкции
+		success = True if instruction.attrib["success"] == "true" else False
+		result, info = self._replace_variables(instruction.attrib["info"])
+		if not result:
+			return (False, info + "\n")
+		if success:
+			self._correct_exit_flag.set()
+		return (False, info + "\n")
 
 	def execute(self, scenario):
 		log = ""
 		#Установка локального пространства имен
 		self._local_variables = {}
+		#Сброс флага корректного корректного выхода
+		self._correct_exit_flag.clear()
 		#Выполнение инструкций сценария
 		for instruction in scenario:
 			try:
 				instruction_result, instruction_log = self._command_handlers[instruction.tag](instruction)
 				log += instruction_log
 				if not instruction_result:
-					return (False, log)
+					if self._correct_exit_flag.isSet():
+						return (True, log)
+					else:
+						return (False, log)
 			except KeyError:
-				return (False, log + "Неверная инструкция '%s'" % instruction.tag)
+				return (False, log + "Неверная инструкция '%s'\n" % instruction.tag)
 		return (True, log)

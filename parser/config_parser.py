@@ -98,6 +98,7 @@ class ConfigParser:
 class Config:
 
 	_instance = None
+	_custom_fields = ("Globals","Dialplans")
 
 	def __new__(cls, *args, **kwargs):
 		if Config._instance is None:
@@ -106,10 +107,33 @@ class Config:
 	
 	def __init__(self, raw_config):
 		self.log_dir = raw_config["LogDirectory"]
-		self.globals = raw_config["Globals"]
-		self.dialplans = raw_config["Dialplans"]
-		self.nodes = tuple(Config.create_component(fabric, type="Node") for fabric in raw_config["Nodes"])
-		self.connections = tuple(Config.create_component(fabric, type="Connection") for fabric in raw_config["Connections"])
+		self.globals = {}
+		self.dialplans = []
+		self.nodes = tuple(Config._create_component(fabric, type="Node") for fabric in raw_config["Nodes"])
+		self.connections = tuple(Config._create_component(fabric, type="Connection") for fabric in raw_config["Connections"])
+		self._customize(raw_config)
+
+	@staticmethod
+	def _create_component(fabric, type):
+		component = None
+		if type == "Node":
+			component = Config.Node(fabric)
+		elif type == "Connection":
+			component = Config.Connection(fabric)
+		return component
+
+	def _customize(self, raw_config):
+		for field in Config._custom_fields:
+			try:
+				if field == "Globals":
+					self.globals = raw_config[field]
+				elif field == "Dialplans":
+					self.dialplans = raw_config[field]
+			except KeyError:
+				pass
+
+	def __str__(self):
+		return "Config object"
 
 	class Node:
 
@@ -124,9 +148,9 @@ class Config:
 			self.encoding = "full_text"
 			self.terms = tuple()
 			self.network_buffer = 15000
-			self.customize(fabric)
+			self._customize(fabric)
 
-		def customize(self, fabric):
+		def _customize(self, fabric):
 			for field in Config.Node._custom_fields:
 				try:
 					if field == "name":
@@ -155,9 +179,9 @@ class Config:
 			self.name = None
 			self.from_node = fabric["from_node"]
 			self.to_node = fabric["to_node"]
-			self.customize(fabric)
+			self._customize(fabric)
 
-		def customize(self, fabric):
+		def _customize(self, fabric):
 			try:
 				self.name = fabric["name"]
 			except KeyError:
@@ -168,16 +192,3 @@ class Config:
 
 		def __repr__(self):
 			return self.__str__()
-
-	@staticmethod
-	def create_component(fabric, type):
-		component = None
-		if type == "Node":
-			component = Config.Node(fabric)
-		elif type == "Connection":
-			component = Config.Connection(fabric)
-		return component
-
-	def __str__(self):
-		return "Config object"
-

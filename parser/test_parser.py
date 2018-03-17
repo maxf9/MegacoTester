@@ -1,20 +1,45 @@
-from threading import Thread
+from lxml.etree import XML, XMLSchema, XMLSyntaxError, DocumentInvalid, fromstring
 from asyncio import get_event_loop, as_completed
 from parser.scenario import Scenario
-import xml.etree.ElementTree as xml
+from threading import Thread
+from os.path import dirname
+from sys import exit
 
 class TestValidator:
-	
+
+	_schema_file = dirname(__file__) + "/schema/scenario.xsd"
+	_file_system = None
+
+	def __init__(self, file_system):
+		TestValidator._file_system = file_system
+		self._schema = TestValidator.load_schema()
+
 	@staticmethod
-	def validate_test(test, schema):
-		pass
+	def load_schema():
+		raw_content = TestValidator._file_system.load_from(TestValidator._schema_file)
+		if raw_content is None:
+			print("Схема '%s' не существует или нет прав доступа" % TestValidator._schema_file)
+			exit(1)
+		try:
+			schema = XMLSchema(XML(raw_content.encode()))
+		except XMLSyntaxError as error_info:
+			print(error_info)
+			exit(1)
+		return schema
+	
+	def validate_test(self, test):
+		try:
+			self._schema.assertValid(test)
+		except DocumentInvalid as error_info:
+			return (False, str(error_info))
+		return (True, None)
 
 class TestParser(Thread):
 
 	_instance = None
 	_file_system = None
 	_frame = None
-	_validator = TestValidator
+	_validator = None
 	_event_loop = get_event_loop()
 
 	def __new__(cls, *args, **kwargs):
@@ -28,6 +53,7 @@ class TestParser(Thread):
 		self.test_queue = test_queue
 		self.log_queue = log_queue
 		TestParser._file_system = file_system
+		TestParser._validator = TestValidator(file_system)
 		TestParser._frame = frame
 
 	@staticmethod
@@ -36,8 +62,8 @@ class TestParser(Thread):
 
 	async def decode_xml(self, raw_content, file):
 		try:
-			decoded_content = xml.fromstring(raw_content)
-		except xml.ParseError as error_info:
+			decoded_content = fromstring(raw_content.encode())
+		except XMLSyntaxError as error_info:
 			decoded_content = None
 			#Отправка отчета об ошибке декодирования файла
 			self.log_queue.put(TestParser._frame(TestParser._frame.REPORT, 
@@ -66,7 +92,14 @@ class TestParser(Thread):
 		if content is None:
 			return
 		#Валидация тестового сценария
-		TestParser._validator.validate_test(content, schema=None)
+		result, reason = TestParser._validator.validate_test(content)
+		if not result:
+		    #Отправка отчета об ошибке валидации файла
+		    self.log_queue.put(TestParser._frame(TestParser._frame.REPORT, 
+				                                 TestParser._frame.Report(TestParser._frame.Report.PARSE,
+				                                 	                      log=reason,
+				                                 	                      success=False)))
+		    return
 		#Отправка отчета об успешном парсинге тестового сценария
 		self.log_queue.put(TestParser._frame(TestParser._frame.REPORT, 
 				                             TestParser._frame.Report(TestParser._frame.Report.PARSE,

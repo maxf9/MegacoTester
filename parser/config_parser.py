@@ -54,7 +54,6 @@ class ConfigValidator:
 class ConfigParser:
 
 	_instance = None
-	_validator = ConfigValidator
 	file_system = None
 	_schema_file = dirname(__file__) + "/schema/config.json"
 
@@ -92,6 +91,6 @@ class ConfigParser:
 		raw_config = ConfigParser.fetch_content(config_file)
 		schema = ConfigParser.fetch_content(ConfigParser._schema_file)
 		#Валидация конфигурационного файла при помощи схемы
-		ConfigParser._validator.validate_config(raw_config, schema)
+		ConfigValidator.validate_config(raw_config, schema)
 		#Сборка объекта класса Config на основе конфигурационного файла
 		return Config(raw_config)

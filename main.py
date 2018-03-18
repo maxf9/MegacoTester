@@ -32,7 +32,7 @@ def main():
 	config_file, tests_files = ArgParser().parse_arguments()
 
 	#Парсинг конфигурационного файла
-	config = ConfigParser(FileSystem).parse_config(config_file)
+	config = ConfigParser().parse_config(config_file)
 
 	#Создание двух очередей синхронизации между потоками программы
 	queues = [Queue() for i in range(2)]

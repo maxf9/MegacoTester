@@ -95,3 +95,8 @@ class Config:
 
 		def __repr__(self):
 			return self.__str__()
+
+class ConfigBuilder:
+
+	def build_config(self, content):
+		return Config(content)

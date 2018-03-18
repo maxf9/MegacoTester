@@ -23,6 +23,10 @@ from queue import Queue
 #Импорт класса кадра для обмена сообщениями между потоками
 from frame import Frame
 
+#Объявление классов FileSystem и Frame в пространстве имен __builtins__
+setattr(__builtins__, 'FileSystem', FileSystem)
+setattr(__builtins__, 'Frame', Frame)
+
 def main():
 	#Парсинг аргументов командной строки
 	config_file, tests_files = ArgParser().parse_arguments()
@@ -34,7 +38,7 @@ def main():
 	queues = [Queue() for i in range(2)]
 
 	#Создание и конфигурация парсера тестовых сценариев
-	test_parser = TestParser(FileSystem, Frame, tests_files, test_queue=queues[0], log_queue=queues[1])
+	test_parser = TestParser(tests_files, test_queue=queues[0], log_queue=queues[1])
 
 	#Создание и конфигурация процессора
 	processor = Processor(config, Frame, test_queue=queues[0], log_queue=queues[1])

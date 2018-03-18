@@ -77,7 +77,7 @@ class ConfigParser:
 	@staticmethod
 	def fetch_content(json_file):
 		#Загрузка содержимого файла
-		raw_content = ConfigParser.file_system.load_from(json_file)
+		raw_content = ConfigParser.file_system.load_from(json_file, binary=False)
 		#Проверка успешного выполнения загрузки содержимого файла
 		if raw_content is None:
 			print("Не удалось загрузить содержимое файла %s. Файла не существует или нет прав на его чтение" % json_file)

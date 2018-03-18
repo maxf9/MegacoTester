@@ -9,9 +9,9 @@ class FileSystem:
 			f.write(content)
 
 	@staticmethod
-	def load_from(file):
+	def load_from(file, binary=True):
 		if isfile(file) and access(file, R_OK):
-			with open(file, "r", encoding="utf-8") as f:
+			with open(file, "br" if binary else "r") as f:
 				content = f.read()
 				return content
 

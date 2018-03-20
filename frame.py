@@ -1,49 +1,34 @@
 class Frame:
+	"""Class that defines the composition of messages exchanged between application components
 
-	STOP, TEST, REPORT = range(3)
+	The Frame instance has two fields: header (mandatory) and payload (optional)
+	The Frame instance can have one of two payload types - Test, Report - or None
+	"""
+
+	STOP, TEST, REPORT = range(3)  # Defines the types of Frame headers
 
 	def __init__(self, header, payload=None):
 		self.header = header
 		self.payload = payload
 
-	def __str__(self):
-		if self.header == Frame.STOP:
-			return "STOP Frame"
-		elif self.header == Frame.TEST:
-			return "TEST Frame"
-		elif self.header == Frame.REPORT:
-			return "REPORT Frame"
-
-	def __repr__(self):
-		return self.__str__()
-
 	class Test:
+		"""Class that defines the Test payload of Frame
+
+		The Test instance has two mandatory fields: name and scenario
+		"""
 		
 		def __init__(self, name, scenario):
 			self.name = name
 			self.scenario = scenario
 
-		def __str__(self):
-			return self.name
-
-		def __repr__(self):
-			return self.__str__()
-
 	class Report:
+		"""Class that defines the Report payload of Frame"""
 
-		PARSE, EXECUTE = range(2)
+		PARSE, EXECUTE = range(2)  # Defines the types of reported actions
 		
-		def __init__(self, action, success, log, test_name=None):
-			self.action = action
-			self.success = success
-			self.test_name = test_name
-			self.log = log
-
-		def __str__(self):
-			if self.action == Frame.Report.PARSE:
-				return "PARSE Report"
-			elif self.action == Frame.Report.EXECUTE:
-				return "EXECUTE Report"
-
-		def __repr__(self):
-			return self.__str__()
+		def __init__(self, action, success, log, dump=None, test_name=None):
+			self.action = action        # Reported action (PARSE or EXECUTE)
+			self.success = success      # Success indicator (True or False)
+			self.test_name = test_name  # Name of reported test
+			self.log = log              # Log of reported test
+			self.dump = dump            # Dump of reported test

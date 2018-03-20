@@ -4,77 +4,8 @@ from os.path import dirname
 from sys import exit
 import json
 
-def decode_json(content, file_path):
-	try:
-		decoded_content = json.loads(content)
-	except json.decoder.JSONDecodeError as error:
-		print("Ошибка декодирования файла %s. %s" % (file_path, error))
-		exit(1)
-	return decoded_content
-
-def fetch_content(file):
-	#Загрузка содержимого файла
-	file_content = FileSystem.load_from(file, binary=False)
-	#Проверка успешного выполнения загрузки содержимого файла
-	if file_content is None:
-		print("Не удалось загрузить содержимое файла %s. Файла не существует или нет прав на его чтение" % file)
-		exit(1)
-	#Декодирование содержимого файла
-	content = decode_json(file_content, file)
-	return content
-
-class ConfigValidator:
-
-	_schema_file = dirname(__file__) + "/schema/config.json"
-
-	def __init__(self):
-		self._schema = fetch_content(ConfigValidator._schema_file)
-
-	def validate_config(self, content):
-		errors = sorted(Draft4Validator(self._schema).iter_errors(content), key=lambda e: e.path)
-		#Проверка наличия ошибок при валидации
-		if errors:
-			ConfigValidator.print_errors(errors)
-			exit(1)
-		#Проверка существования и доступности директории для логов
-		if not FileSystem.is_acceptable_directory(content["LogDirectory"]):
-			print("Directory \"%s\" is not acceptable log directory" % content["LogDirectory"])
-			exit(1)
-		#Проверка уникальности идентификаторов
-		if not ConfigValidator.is_unique_identiers(Nodes=content["Nodes"], Connections=content["Connections"]):
-			exit(1)
-		#Проверка на отсутствие вырожденных соединений
-		if not ConfigValidator.is_acceptable_connections(content["Connections"]):
-			exit(1)
-
-	@staticmethod
-	def is_unique_identiers(**sections):
-		valid_indicator = True
-		for name,section in sections.items():
-			identifiers = set()
-			for item in section:
-				if item["id"] not in identifiers:
-					identifiers.add(item["id"])
-				else:
-					valid_indicator = False
-					print("Объект '%s' секции '%s' имеет неуникальный идентификатор: %s" % (item["name"], name, item["id"]))
-		return valid_indicator
-
-	@staticmethod
-	def is_acceptable_connections(connections):
-		valid_indicator = True
-		for connection in connections:
-			if connection["from_node"] == connection["to_node"]:
-				valid_indicator = False
-				print("Connection '%s' имеет одинаковые идентификаторы 'from_node' и 'to_node'" % connection["id"])
-		return valid_indicator
-
-	@staticmethod
-	def print_errors(errors):
-		for error in errors:
-			print(error)
-
 class ConfigParser:
+	"""Class for parsing the configuration file"""
 
 	_instance = None
 
@@ -84,13 +15,111 @@ class ConfigParser:
 		return ConfigParser._instance
 
 	def __init__(self):
-		self._validator = ConfigValidator()
-		self._config_builder = ConfigBuilder()
+		self._validator = ConfigValidator()     # Validator for the configuration file
+		self._config_builder = ConfigBuilder()  # Builder for the configuration file
 
 	def parse_config(self, config_file):
-		#Десериализация и декодирование файла конфигурации
-		content = fetch_content(config_file)
-		#Валидация конфигурационного файла
-		self._validator.validate_config(content)
-		#Сборка объекта класса Config на основе конфигурационного файла
-		return self._config_builder.build_config(content)
+		"""Parses the configuration file
+
+		Returns the Config instance
+		"""
+		content = JSONWorker.fetch_content(config_file)    # Deserialization and decoding of the configuration file
+		self._validator.validate_config(content)           # Validating the configuration file
+		return self._config_builder.build_config(content)  # Makes the Config instance based on the configuration file
+
+class ConfigValidator:
+	"""Class for validating the configuration file contents"""
+
+	# Absolute path to schema for the configuration file
+	_schema_file = dirname(__file__) + "/schema/config.json"
+	# Error definition string before detail description
+	_error_basis = "Config Error: configuration file is not valid. "
+
+	def __init__(self):
+		 # Making the schema instance for validation of the configuration file contents 
+		self._schema = JSONWorker.fetch_content(ConfigValidator._schema_file) 
+
+	def validate_config(self, content):
+		"""Validates the configuration file contents according to the schema"""
+		errors = sorted(Draft4Validator(self._schema).iter_errors(content), key=lambda e: e.path)
+		# Checking for errors when validating
+		# If the error is caught makes the error exit
+		if errors:
+			ConfigValidator._print_errors(errors)
+			exit(1)
+		# Checking the existence and availability of a directory for logs
+		if not FileSystem.is_acceptable_directory(content["LogDirectory"]):
+			print(ConfigValidator._error_basis + "Details: unacceptable log directory '%s' " % content["LogDirectory"])
+			exit(1)
+		# Checking the uniqueness of nodes and connections identifiers
+		ConfigValidator._has_unique_identiers(Nodes=content["Nodes"], Connections=content["Connections"])
+		# Checking for the absence of degenerate connections
+		ConfigValidator._has_acceptable_connections(content["Connections"])
+
+	@staticmethod
+	def _has_unique_identiers(**sections):
+		"""Checks for uniqueness of nodes and connections identifiers
+
+		Nodes and connections identifiers must be unique within its own section
+		Makes the error exit if the condition above is False
+		"""
+		identifiers = set()
+		for name, section in sections.items():
+			identifiers.clear()
+			for item in section:
+				if item["id"] not in identifiers:
+					identifiers.add(item["id"])
+				else:
+					print(ConfigValidator._error_basis + "Details: object with id '%s' in section '%s' has a non-unique identifier: '%s'" % (item["id"], name, item["id"]))
+					exit(1)
+
+	@staticmethod
+	def _has_acceptable_connections(connections):
+		"""Checks for the absence of degenerate connections
+
+		from_node and to_node properties of connection should't be equal
+		Makes the error exit if the condition above is False
+		"""
+		for connection in connections:
+			if connection["from_node"] == connection["to_node"]:
+				print(ConfigValidator._error_basis + "Details: connection with id '%s' has an equal node identifiers in 'from_node' and 'to_node' properties" % connection["id"])
+				exit(1)
+
+	@staticmethod
+	def _print_errors(errors):
+		"""Prints errors found during the configuration validation"""
+		for error in errors:
+			if len(error.path) == 0:
+				print(ConfigValidator._error_basis + "Details: %s" % error.message)
+			elif len(error.path) == 1 or len(error.path) == 2:
+				print(ConfigValidator._error_basis + "Details: %s in section '%s'" % (error.message, error.path[0]))
+			elif len(error.path) == 3:
+				print(ConfigValidator._error_basis + "Details: %s in section '%s' property '%s'" % (error.message, error.path[0], error.path[-1]))
+			else:
+				print(ConfigValidator._error_basis + "Details: %s in section '%s' property '%s'" % (error.message, error.path[0], error.path[-2]))
+
+class JSONWorker:
+	"""Static class for parsing json contents"""
+
+	@staticmethod
+	def decode_json(content):
+		"""Decodes json contents"""
+		try:
+			decoded_content = json.loads(content)
+		except json.decoder.JSONDecodeError as error:
+			print("Config Error: can't parse the configuration file. Details: %s" % error)
+			exit(1)
+		return decoded_content
+
+	@staticmethod
+	def fetch_content(file):
+		"""Loads and decodes the contents of the json file
+
+		Returns decoded json contents or makes the error exit
+		"""
+		file_content = FileSystem.load_from(file, binary=False)
+		if file_content is None:
+			print("Config Error: can't load the configuration file from path '%s'. Details: file does't exist or no permission to read it" % file)
+			exit(1)
+		content = JSONWorker.decode_json(file_content)
+		return content

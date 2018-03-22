@@ -1,102 +1,97 @@
-class Config:
+class ConfigBuilder:
+	"""Class for building the Config instance from validated contents of the configuration file"""
 
 	_instance = None
-	_custom_fields = ("Globals","Dialplans")
 
 	def __new__(cls, *args, **kwargs):
-		if Config._instance is None:
-			Config._instance = object.__new__(cls)
-		return Config._instance
-	
-	def __init__(self, raw_config):
-		self.log_dir = raw_config["LogDirectory"]
-		self.globals = {}
-		self.dialplans = []
-		self.nodes = tuple(Config._create_component(fabric, type="Node") for fabric in raw_config["Nodes"])
-		self.connections = tuple(Config._create_component(fabric, type="Connection") for fabric in raw_config["Connections"])
-		self._customize(raw_config)
+		if ConfigBuilder._instance is None:
+			ConfigBuilder._instance = object.__new__(cls)
+		return ConfigBuilder._instance
+
+	def __init__(self):
+		self._config = Config()
+		self._makers = self._define_makers()
+
+	def _define_makers(self):
+		return {"LogDirectory" : self._make_log_directory,
+		        "Globals" : self._make_globals,
+		        "Dialplans" : self._make_dialplans,
+		        "Nodes" : self._make_nodes,
+		        "Connections" : self._make_connections}
 
 	@staticmethod
-	def _create_component(fabric, type):
-		component = None
-		if type == "Node":
-			component = Config.Node(fabric)
-		elif type == "Connection":
-			component = Config.Connection(fabric)
-		return component
-
-	def _customize(self, raw_config):
-		for field in Config._custom_fields:
+	def _build_node(fabric):
+		node = Config.Node(fabric["id"], fabric["ip_address"], fabric["port"])
+		for field in ("name", "mid", "encoding", "terms", "network_buffer"):
 			try:
-				if field == "Globals":
-					self.globals = raw_config[field]
-				elif field == "Dialplans":
-					self.dialplans = raw_config[field]
+				if field == "name":
+					node.name = fabric[field]
+				elif field == "mid":
+					node.mid = fabric[field]
+				elif field == "encoding":
+					node.encoding = fabric[field]
+				elif field == "terms":
+					node.terms = tuple(fabric[field])
+				elif field == "network_buffer":
+					node.network_buffer = fabric[field]
 			except KeyError:
 				pass
+		return node
 
-	def __str__(self):
-		return "Config object"
+	@staticmethod
+	def _build_connection(fabric):
+		connection = Config.Connection(fabric["id"], fabric["from_node"], fabric["to_node"])
+		try:
+			connection.name = fabric["name"]
+		except KeyError:
+			pass
+		return connection
+
+	def _make_log_directory(self, sample):
+		self._config.log_dir = sample
+
+	def _make_globals(self, sample):
+		self._config.globals = sample
+
+	def _make_dialplans(self, sample):
+		self._config.dialplans = sample
+
+	def _make_nodes(self, sample):
+		self._config.nodes = tuple(ConfigBuilder._build_node(fabric) for fabric in sample)
+
+	def _make_connections(self, sample):
+		self._config.connections = tuple(ConfigBuilder._build_connection(fabric) for fabric in sample)
+
+	def build_config(self, content):
+		for component in content:
+			self._makers[component](content[component])
+		return self._config
+
+class Config:
+
+	def __init__(self):
+		self.log_dir = None
+		self.globals = {}
+		self.dialplans = []
+		self.nodes = None
+		self.connections = None
 
 	class Node:
 
-		_custom_fields = ("name","mid","encoding","terms","network_buffer")
-		
-		def __init__(self, fabric):
-			self.id = fabric["id"]
-			self.name = None
-			self.ip_address = fabric["ip_address"]
-			self.port = fabric["port"]
+		def __init__(self, nid, ip_address, port):
+			self.id = nid
+			self.name = ""
+			self.ip_address = ip_address
+			self.port = port
 			self.mid = "[%s]:%s" % (self.ip_address, self.port)
 			self.encoding = "full_text"
 			self.terms = tuple()
 			self.network_buffer = 15000
-			self._customize(fabric)
-
-		def _customize(self, fabric):
-			for field in Config.Node._custom_fields:
-				try:
-					if field == "name":
-						self.name = fabric[field]
-					elif field == "mid":
-						self.mid = fabric[field]
-					elif field == "encoding":
-						self.encoding = fabric[field]
-					elif field == "terms":
-						self.terms = tuple(fabric[field])
-					elif field == "network_buffer":
-						self.network_buffer = fabric[field]
-				except KeyError:
-					pass
-
-		def __str__(self):
-			return "Node: %s" % self.id
-
-		def __repr__(self):
-			return self.__str__()
 
 	class Connection:
-		
-		def __init__(self, fabric):
-			self.id = fabric["id"]
-			self.name = None
-			self.from_node = fabric["from_node"]
-			self.to_node = fabric["to_node"]
-			self._customize(fabric)
 
-		def _customize(self, fabric):
-			try:
-				self.name = fabric["name"]
-			except KeyError:
-				pass
-
-		def __str__(self):
-			return "Connection: %s" % self.id
-
-		def __repr__(self):
-			return self.__str__()
-
-class ConfigBuilder:
-
-	def build_config(self, content):
-		return Config(content)
+		def __init__(self, cid, from_node, to_node):
+			self.id = cid
+			self.name = ""
+			self.from_node = from_node
+			self.to_node = to_node

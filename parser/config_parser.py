@@ -33,7 +33,7 @@ class ConfigValidator:
 	# Absolute path to schema for the configuration file
 	_schema_file = dirname(__file__) + "/schema/config.json"
 	# Error definition string before detail description
-	_error_basis = "Config Error: configuration file is not valid. "
+	_error_basis = "Config Error: configuration file is not valid. Details: "
 
 	def __init__(self):
 		 # Making the schema instance for validation of the configuration file contents 
@@ -49,7 +49,7 @@ class ConfigValidator:
 			exit(1)
 		# Checking the existence and availability of a directory for logs
 		if not FileSystem.is_acceptable_directory(content["LogDirectory"]):
-			print(ConfigValidator._error_basis + "Details: unacceptable log directory '%s' " % content["LogDirectory"])
+			print(ConfigValidator._error_basis + "unacceptable log directory '%s' " % content["LogDirectory"])
 			exit(1)
 		# Checking the uniqueness of nodes and connections identifiers
 		ConfigValidator._has_unique_identiers(Nodes=content["Nodes"], Connections=content["Connections"])
@@ -70,7 +70,7 @@ class ConfigValidator:
 				if item["id"] not in identifiers:
 					identifiers.add(item["id"])
 				else:
-					print(ConfigValidator._error_basis + "Details: object with id '%s' in section '%s' has a non-unique identifier: '%s'" % (item["id"], name, item["id"]))
+					print(ConfigValidator._error_basis + "object with id '%s' in section '%s' has a non-unique identifier: '%s'" % (item["id"], name, item["id"]))
 					exit(1)
 
 	@staticmethod
@@ -82,7 +82,7 @@ class ConfigValidator:
 		"""
 		for connection in connections:
 			if connection["from_node"] == connection["to_node"]:
-				print(ConfigValidator._error_basis + "Details: connection with id '%s' has an equal node identifiers in 'from_node' and 'to_node' properties" % connection["id"])
+				print(ConfigValidator._error_basis + "connection with id '%s' has an equal node identifiers in 'from_node' and 'to_node' properties" % connection["id"])
 				exit(1)
 
 	@staticmethod
@@ -90,13 +90,13 @@ class ConfigValidator:
 		"""Prints errors found during the configuration validation"""
 		for error in errors:
 			if len(error.path) == 0:
-				print(ConfigValidator._error_basis + "Details: %s" % error.message)
+				print(ConfigValidator._error_basis + error.message)
 			elif len(error.path) == 1 or len(error.path) == 2:
-				print(ConfigValidator._error_basis + "Details: %s in section '%s'" % (error.message, error.path[0]))
+				print(ConfigValidator._error_basis + "%s in section '%s'" % (error.message, error.path[0]))
 			elif len(error.path) == 3:
-				print(ConfigValidator._error_basis + "Details: %s in section '%s' property '%s'" % (error.message, error.path[0], error.path[-1]))
+				print(ConfigValidator._error_basis + "%s in section '%s' property '%s'" % (error.message, error.path[0], error.path[-1]))
 			else:
-				print(ConfigValidator._error_basis + "Details: %s in section '%s' property '%s'" % (error.message, error.path[0], error.path[-2]))
+				print(ConfigValidator._error_basis + "%s in section '%s' property '%s'" % (error.message, error.path[0], error.path[-2]))
 
 class JSONWorker:
 	"""Static class for parsing json contents"""

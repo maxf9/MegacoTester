@@ -9,10 +9,11 @@ class ConfigBuilder:
 		return ConfigBuilder._instance
 
 	def __init__(self):
-		self._config = Config()
-		self._makers = self._define_makers()
+		self._config = Config()               # Config instance
+		self._makers = self._define_makers()  # Makers for building the Config instance
 
 	def _define_makers(self):
+		"""Defines makers for building the Config instance"""
 		return {"LogDirectory" : self._make_log_directory,
 		        "Globals" : self._make_globals,
 		        "Dialplans" : self._make_dialplans,
@@ -21,8 +22,9 @@ class ConfigBuilder:
 
 	@staticmethod
 	def _build_node(fabric):
-		node = Config.Node(fabric["id"], fabric["ip_address"], fabric["port"])
-		for field in ("name", "mid", "encoding", "terms", "network_buffer"):
+		"""Builds and returns the Node instance"""
+		node = Config.Node(fabric["id"], fabric["ip_address"], fabric["port"])  # Builds the required attributes of the Node instance
+		for field in ("name", "mid", "encoding", "terms", "network_buffer"):    # Builds optional attributes of the Node instance
 			try:
 				if field == "name":
 					node.name = fabric[field]
@@ -40,31 +42,38 @@ class ConfigBuilder:
 
 	@staticmethod
 	def _build_connection(fabric):
-		connection = Config.Connection(fabric["id"], fabric["from_node"], fabric["to_node"])
-		try:
+		"""Builds and returns the Connection instance"""
+		connection = Config.Connection(fabric["id"], fabric["from_node"], fabric["to_node"])  # Builds the required attributes of the Connection instance
+		try:                                                                                  # Builds optional attributes of the Connection instance
 			connection.name = fabric["name"]
 		except KeyError:
 			pass
 		return connection
 
 	def _make_log_directory(self, sample):
+		"""Builds the lod_dir attribute of the Config instance"""
 		self._config.log_dir = sample
 
 	def _make_globals(self, sample):
+		"""Builds the globals attribute of the Config instance"""
 		self._config.globals = sample
 
 	def _make_dialplans(self, sample):
+		"""Builds the dialplans attribute of the Config instance"""
 		self._config.dialplans = sample
 
 	def _make_nodes(self, sample):
+		"""Builds the nodes attribute of the Config instance"""
 		self._config.nodes = tuple(ConfigBuilder._build_node(fabric) for fabric in sample)
 
 	def _make_connections(self, sample):
+		"""Builds the connections attribute of the Config instance"""
 		self._config.connections = tuple(ConfigBuilder._build_connection(fabric) for fabric in sample)
 
 	def build_config(self, content):
+		"""Builds and returns the Config instance"""
 		for component in content:
-			self._makers[component](content[component])
+			self._makers[component](content[component])   # Building the Config attributes 
 		return self._config
 
 class Config:

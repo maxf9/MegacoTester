@@ -16,7 +16,7 @@ class ConfigParser:
 
 	def __init__(self):
 		self._validator = ConfigValidator()     # Validator for the configuration file
-		self._config_builder = ConfigBuilder()  # Builder for the configuration file
+		self._config_builder = ConfigBuilder()  # Builder for the Config instance
 
 	def parse_config(self, config_file):
 		"""Parses the configuration file
@@ -36,7 +36,7 @@ class ConfigValidator:
 	_error_basis = "Config Error: configuration file is not valid. Details: "
 
 	def __init__(self):
-		 # Making the schema instance for validation of the configuration file contents 
+		# Making the schema instance for validation of the configuration file contents 
 		self._schema = JSONWorker.fetch_content(ConfigValidator._schema_file) 
 
 	def validate_config(self, content):

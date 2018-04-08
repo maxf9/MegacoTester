@@ -86,6 +86,7 @@
 		<xs:element name="compare" type="CompareInstruction" minOccurs="0" maxOccurs="unbounded"/>
 		<xs:element name="print" type="PrintInstruction" minOccurs="0" maxOccurs="unbounded"/>
 		<xs:element name="exit" type="ExitInstruction" minOccurs="0" maxOccurs="unbounded"/>
+    <xs:element name="pause" type="PauseInstruction" minOccurs="0" maxOccurs="unbounded"/>
 	</xs:choice>
 </xs:complexType>
 
@@ -107,6 +108,7 @@
 	<xs:choice maxOccurs="unbounded">
 		<xs:element name="assign" type="AssignInstruction" minOccurs="0" maxOccurs="unbounded"/>
 		<xs:element name="print" type="PrintInstruction" minOccurs="0" maxOccurs="unbounded"/>
+    <xs:element name="pause" type="PauseInstruction" minOccurs="0" maxOccurs="unbounded"/>
 		<xs:element name="exit" type="ExitInstruction" minOccurs="0" maxOccurs="unbounded"/>
 	</xs:choice>
 	<xs:attribute name="first" type="xs:string" use="required"/>
@@ -122,9 +124,6 @@
 			<xs:element name="send" type="SendInstruction" maxOccurs="unbounded"/>
 			<xs:element name="recv" type="RecvInstruction" maxOccurs="unbounded"/>
 			<xs:element name="nop" type="NopInstruction" maxOccurs="unbounded"/>
-			<xs:element name="pause" type="PauseInstruction" maxOccurs="unbounded"/>
-			<xs:element name="print" type="PrintInstruction" maxOccurs="unbounded"/>
-			<xs:element name="exit" type="ExitInstruction" maxOccurs="unbounded"/>
 		</xs:choice>
 		<xs:attribute name="name" type="NamePattern" use="required"/>
 	</xs:complexType>

@@ -5,34 +5,9 @@ from os.path import dirname
 import lxml.etree as xml
 from sys import exit
 
-class ScenarioValidator:
-
-	_schema_file = dirname(__file__) + "/schema/scenario.xsd"
-
-	def __init__(self):
-		self._schema = ScenarioValidator._create_schema()
-
-	@staticmethod
-	def _create_schema():
-		schema_content = FileSystem.load_from(ScenarioValidator._schema_file)
-		if schema_content is None:
-			print("Схема '%s' не существует или нет прав доступа" % ScenarioValidator._schema_file)
-			exit(1)
-		try:
-			schema = xml.XMLSchema(xml.XML(schema_content))
-		except xml.XMLSyntaxError as error:
-			print(error)
-			exit(1)
-		return schema
-	
-	def validate_scenario(self, content):
-		try:
-			self._schema.assertValid(content)
-		except xml.DocumentInvalid as error:
-			return (False, str(error))
-		return (True, None)
 
 class TestParser(Thread):
+	"""Class for parsing test files"""
 
 	_instance = None
 
@@ -43,78 +18,118 @@ class TestParser(Thread):
 	
 	def __init__(self, tests_files, test_queue, log_queue):
 		super().__init__()
-		self.tests_files = tests_files
-		self.test_queue = test_queue
-		self.log_queue = log_queue
-		self._validator = ScenarioValidator()
-		self._scenario_builder = ScenarioBuilder()
-		self._event_loop = get_event_loop()
+		self.tests_files = tests_files              # List of paths to tests files
+		self.test_queue = test_queue                # FIFO queue to the Processor instance 
+		self.log_queue = log_queue                  # FIFO queue to the TestLogger instance
+		self._validator = ScenarioValidator()       # Validator for the tests files
+		self._scenario_builder = ScenarioBuilder()  # Builder for the Scenario instance
+		self._event_loop = get_event_loop()         # Getting an event loop for asynchronous task processing
+
+	async def validate_test(self, content):
+		"""Asynchronous wrapper for the _validator.validate_scenario method"""
+		return self._validator.validate_scenario(content)
 
 	@staticmethod
 	async def load_file(file):
+		"""Asynchronous wrapper for the FileSystem.load_from method"""
 		return FileSystem.load_from(file)
 
-	async def decode_xml(self, file_content, file_path):
-		try:
-			decoded_content = xml.fromstring(file_content)
-		except xml.XMLSyntaxError as error:
-			#Отправка отчета об ошибке декодирования файла
-			self.log_queue.put(Frame(Frame.REPORT, Frame.Report(Frame.Report.PARSE,
-				                                 	            log="Файл '%s' имеет неправильный формат: %s" % (file_path, str(error)),
-				                                 	            success=False)))
-		else:
-			return decoded_content
+	@staticmethod
+	async def decode_xml(content):
+		"""Asynchronous wrapper for the XMLWorker.decode_xml method"""
+		return XMLWorker.decode_xml(content)
 
 	async def fetch_content(self, file):
-		#Загрузка файла тестового сценария
-		file_content = await TestParser.load_file(file)
+		"""Loads and decodes the xml scenario from test file
+
+		Returns decoded scenario content or None, if an error occurs
+		"""
+		file_content = await TestParser.load_file(file)  # Loads the xml scenario from test file
 		if file_content is None:
-			#Отправка отчета об ошибке загрузки файла
+			# Sending a scenario load error report
 			self.log_queue.put(Frame(Frame.REPORT, Frame.Report(Frame.Report.PARSE,
-				                                 	            log="Файл '%s' не существует или нет прав доступа" % file,
+				                                 	            log="Test Error: can't parse the test file '%s'. Details: file does't exist or no permission to read it" % file,
 				                                 	            success=False)))
 			return
-		#Декодирование файла тестового сценария
-		content = await self.decode_xml(file_content, file)
+		result, content = await TestParser.decode_xml(file_content)  # Decodes the xml scenario
+		if not result:
+			# Sending a scenario decode error report
+			self.log_queue.put(Frame(Frame.REPORT, Frame.Report(Frame.Report.PARSE,
+				                                 	            log="Test Error: can't parse the test file '%s'. Details: %s" % (file, content),
+				                                 	            success=False)))
+			return
 		return content
 
-	async def validate_test(self, content):
-		return self._validator.validate_scenario(content)
-
 	async def parse_test(self, file):
-		#Десериализация и декодирование тестового сценария 
-		content = await self.fetch_content(file)
+		"""Parses and validates the decoded xml scenario from test file
+
+		Returns decoded and valid scenario content or None, if an error occurs
+		"""
+		content = await self.fetch_content(file)  # Deserialization and decoding of the test file
 		if content is None:
 			return
-		#Валидация тестового сценария
-		result, reason = await self.validate_test(content)
+		result, reason = await self.validate_test(content)  # Validating the scenario from test file
 		if not result:
-		    #Отправка отчета об ошибке валидации файла
+		    # Sending a scenario validation error report
 		    self.log_queue.put(Frame(Frame.REPORT, Frame.Report(Frame.Report.PARSE,
-				                                 	            log=reason,
+				                                 	            log="Test Error: can't parse the test file '%s'. Details: %s" % (file, reason),
 				                                 	            success=False)))
 		    return
-		#Отправка отчета об успешном парсинге тестового сценария
+		# Sending a report on the successful parsing of the test scenario
 		self.log_queue.put(Frame(Frame.REPORT, Frame.Report(Frame.Report.PARSE,
-				                                 	        log="Файл '%s' успешно прошел парсинг" % file,
+				                                 	        log="File '%s' is successfully parsed" % file,
 				                                 	        success=True)))
 		return content
 
 	async def main_coro(self):
-		#Создание задач для обработчика
-		tasks = [self.parse_test(file) for file in self.tests_files]
+		"""Creates tasks for asynchronous event loop"""
+		tasks = [self.parse_test(file) for file in self.tests_files]  # Creating tasks for event loop
+		# Asynchronous task execution by event loop
 		for number,task in enumerate(as_completed(tasks)):
 			content = await task
-			#Постановка теста в очередь к процессору
+			# Sending the test to the Processor instance
 			if content is not None:
 				self.test_queue.put(Frame(Frame.TEST, Frame.Test("Test_%s_%s" % (number, content.attrib["name"]),
 				                                                 self._scenario_builder.build_scenario(content))))
 
 	def run(self):
-		#Запуск обработчика событий
+		# Running the asynchronous event loop
 		self._event_loop.run_until_complete(self.main_coro())
-		#Остановка обработчика событий
+		# Stop the asynchronous event loop
 		self._event_loop.close()
-		#Отправка стоповых кадров по завершению парсинга тестовых сценариев
+		# Send stop frames at the end of parsing of tests scenarios
 		self.log_queue.put(Frame(Frame.STOP))
 		self.test_queue.put(Frame(Frame.STOP))
+
+class ScenarioValidator:
+	"""Class for validating the tests files contents"""
+
+	# Absolute path to schema for tests files
+	_schema_file = dirname(__file__) + "/schema/scenario.xsd"
+
+	def __init__(self):
+		# Making the schema instance for validation of tests files contents 
+		self._schema = xml.XMLSchema(xml.XML(FileSystem.load_from(ScenarioValidator._schema_file)))
+	
+	def validate_scenario(self, content):
+		"""Validates the testing scenario contents according to the schema
+
+		Returns result of validation and error description, if it occurs
+		"""
+		try:
+			self._schema.assertValid(content)
+		except xml.DocumentInvalid as error:
+			return (False, str(error))
+		return (True, None)
+
+class XMLWorker:
+	"""Static class for parsing xml contents"""
+	
+	@staticmethod
+	def decode_xml(content):
+		"""Decodes xml contents"""
+		try:
+			decoded_content = xml.fromstring(content)
+		except xml.XMLSyntaxError as error:
+			return (False, str(error))			                                 	        
+		return (True, decoded_content)

@@ -10,7 +10,7 @@ class TestLogger(Thread):
 			TestLogger._instance = object.__new__(cls)
 		return TestLogger._instance
 
-	def __init__(self, file_system, frame, log_dir, log_queue):
+	def __init__(self, log_dir, log_queue):
 		super().__init__()
 		self.log_dir = log_dir
 		self.log_queue = log_queue

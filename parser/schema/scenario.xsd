@@ -8,13 +8,6 @@
     </xs:restriction>
 </xs:simpleType>
 
-<xs:simpleType name="Boolean">
-    <xs:restriction base="xs:string">
-      <xs:enumeration value="true"/>
-      <xs:enumeration value="false"/>
-    </xs:restriction>
-</xs:simpleType>
-
 <xs:simpleType name="ExitStatus">
     <xs:restriction base="xs:string">
       <xs:enumeration value="success"/>
@@ -45,8 +38,7 @@
   <xs:simpleContent>
     <xs:extension base="xs:string">
       <xs:attribute name="regexp" type="xs:string" use="required"/>
-      <xs:attribute name="overlap" type="xs:integer"/>
-      <xs:attribute name="check_it" type="Boolean"/>
+      <xs:attribute name="match" type="xs:integer"/>
       <xs:attribute name="assign_to" type="xs:string" use="required"/>
     </xs:extension>
   </xs:simpleContent>
@@ -107,6 +99,7 @@
 <xs:complexType name="CompareInstruction">
 	<xs:choice maxOccurs="unbounded">
 		<xs:element name="assign" type="AssignInstruction" minOccurs="0" maxOccurs="unbounded"/>
+    <xs:element name="compare" type="CompareInstruction" minOccurs="0" maxOccurs="unbounded"/>
 		<xs:element name="print" type="PrintInstruction" minOccurs="0" maxOccurs="unbounded"/>
     <xs:element name="pause" type="PauseInstruction" minOccurs="0" maxOccurs="unbounded"/>
 		<xs:element name="exit" type="ExitInstruction" minOccurs="0" maxOccurs="unbounded"/>

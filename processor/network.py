@@ -26,14 +26,18 @@ class NetworkAdapter:
 		return dict([(node.id, (node.ip_address,node.port)) for node in nodes]) 
 
 	def send(self, message, to_node):
+		"""Sends a message to the remote node
+
+		Returns the action result and its info
+		"""
 		try:
 			self._socket.sendto(message.encode(), self._routes[to_node])
-		except (OSError,IOError) as error_info:
-			return (False, "Ошибка отправки сообщения: %s\n" % str(error_info))
-		return (True, "Сообщение успешно отправлено\n")
+		except (OSError,IOError) as error:
+			return (False, "Message has not been sent: %s" % str(error))
+		return (True, "Message has been successfully sent to node '%s:%s'" % self._routes[to_node])
 
 	def recv(self, from_node, timeout):
-		"""Receives a message from a remote node
+		"""Receives a message from the remote node
 
 		Returns the action result, action log, remote node properties and received data
 		"""
@@ -41,11 +45,11 @@ class NetworkAdapter:
 		try:
 			data, node = self._socket.recvfrom(self.buffer)
 		except (OSError, IOError, sock_timeout) as error:
-			return (False, "Message has not received: " + str(error), None)
+			return (False, "Message has not been received: " + str(error), None)
 		else:
 			if node != self._routes[from_node]:  # The message must be received from the expected node
-				return (False, "Message has received from unexpeted node '%s:%s'" % node, hexlify(data).decode("ascii"))
-		return (True, "Message has successfully received from node '%s:%s'" % node, data.decode())
+				return (False, "Message has been received from unexpeted node '%s:%s'" % node, hexlify(data).decode("ascii"))
+		return (True, "Message has been successfully received from node '%s:%s'" % node, data.decode())
 
 	def close(self):
 		self._socket.close()

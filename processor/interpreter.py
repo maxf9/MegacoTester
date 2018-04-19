@@ -1,7 +1,7 @@
 from processor.network import NetworkAdapter
 from time import sleep, strftime
-from re import findall, compile
 from threading import Event
+from re import findall
 from sys import exit
 
 class ScenarioInterpreter:
@@ -20,7 +20,7 @@ class ScenarioInterpreter:
 		         "Print" : self._handle_print,
 		         "Exit" : self._handle_exit,
 		         "Nop" : self._handle_nop,
-		         "Pause" : ScenarioInterpreter._handle_pause }
+		         "Pause" : self._handle_pause }
 
 	def __new__(cls, *args, **kwargs):
 		if ScenarioInterpreter._instance is None:
@@ -123,7 +123,7 @@ class ScenarioInterpreter:
 		Adds users variables to local scenario namespace
 		"""
 		self._local_variables.update(instruction.variables)
-		self._test_log += strftime("(%d.%m.%Y) %Hh:%Mm:%Ss") + "\t[Define]  User variables '%s' were successfully defined in the local namespace\n\n" % ", ".join(instruction.variables.keys())
+		self._test_log += strftime("(%d.%m.%Y) %Hh:%Mm:%Ss") + "\t[Define]    User variables '%s' were successfully defined in the local namespace\n\n" % ", ".join(instruction.variables.keys())
 		return True
 
 	def _handle_recv(self, instruction):
@@ -134,11 +134,11 @@ class ScenarioInterpreter:
 		# Searching for a network adapter by connection identifier
 		network_adapter = self._get_network_adapter(instruction.connection)
 		if network_adapter is None:
-			self._test_log += strftime("(%d.%m.%Y) %Hh:%Mm:%Ss") + "\t[Recv]    Value '%s' is nonexistent connection identifier\n" % instruction.connection
+			self._test_log += strftime("(%d.%m.%Y) %Hh:%Mm:%Ss") + "\t[Recv]      Value '%s' is nonexistent connection identifier\n" % instruction.connection
 			return False
 		# Receiving a message from a connection
 		success, recv_log, data = network_adapter.recv(self._routes[instruction.connection], timeout=instruction.timeout)
-		self._test_log += strftime("(%d.%m.%Y) %Hh:%Mm:%Ss") + "\t[Recv]    " + recv_log + "\n"
+		self._test_log += strftime("(%d.%m.%Y) %Hh:%Mm:%Ss") + "\t[Recv]      " + recv_log + "\n"
 		if not success:
 			return False
 		# Executing nested instructions
@@ -147,17 +147,26 @@ class ScenarioInterpreter:
 		return True
 
 	def _handle_send(self, instruction):
-		#Поиск сетевого адаптера по идентификатору соединения
+		"""Executes	the send instruction of the test scenario
+
+		Returns True, if instruction has successfully completed or False otherwise
+		"""
+		# Searching for a network adapter by connection identifier
 		network_adapter = self._get_network_adapter(instruction.connection)
 		if network_adapter is None:
-			self._test_log += "Send: неправильный идентификатор соединения '%s'\n" % instruction.connection
-			return (False, )
-		#Подстановка значений переменных в сообщение
-		result, message = self._replace_variables(instruction.text)
-		if not result:
-			return (False, message)
-		#Отправка сообщения удаленному узлу
-		return network_adapter.send(message, to_node=self._routes[connection])
+			self._test_log += strftime("(%d.%m.%Y) %Hh:%Mm:%Ss") + "\t[Send]      Value '%s' is nonexistent connection identifier\n" % instruction.connection
+			return False
+		# Changing variables to their values
+		success, reason, message = self._replace_variables(instruction.message)
+		if not success:
+			self._test_log += strftime("(%d.%m.%Y) %Hh:%Mm:%Ss") + "\t[Send]      " + reason + "\n"
+			return False
+		# Sending a message to the remote node
+		success, info = network_adapter.send(message, to_node=self._routes[instruction.connection])
+		self._test_log += strftime("(%d.%m.%Y) %Hh:%Mm:%Ss") + "\t[Send]      " +  info + "\n"
+		if not success:
+			return False
+		return True
 
 	def _handle_actions(self, instructions, data=None):
 		"""Executes instructions from the action block
@@ -168,113 +177,134 @@ class ScenarioInterpreter:
 		for instruction in instructions:
 			if not self._command_handlers[instruction.__class__.__name__](instruction, data):
 				return False
+		self._test_log += "\n"
 		return True
 
-	def _handle_catch(self, instruction, data):
-		#Получение значений атрибутов инструкции
-		regexp = compile(instruction.attrib["regexp"])
-		overlap = int(instruction.attrib["overlap"])
-		check_it = True if instruction.attrib["check_it"] == "true" else False
-		variables = instruction.attrib["assign_to"].split(",")
-		#Нахождение всех возможных совпадений с регулярным выражением
-		values = regexp.findall(data)
-		#Обработка результатов и запись переменных в локальное пространство имен
-		if not values:
-			if check_it:
-				return (False, "По регулярному выражению '%s' не найдено совпадений\n" % regexp)
-			else:
-				for variable in variables:
-				    self._local_variables[variable] = ""
-		elif overlap < len(values):
-			overlapped = values[overlap]
-			if type(overlapped) == str:
-				for variable in variables:
-					self._local_variables[variable] = overlapped
-			else:
-				for variable in variables:
-					pass #запись множества значений в несколько переменных
-		else:
-			return (False, "Невозможно извлечь совпадение по данному полю overlap: '%s'\n" % overlap)
-		return (True, "Действие 'catch' успешно обработано\n")
+	def _handle_catch(self, instruction, data=None):
+		"""Executes the catch instruction of the test scenario
 
-	@staticmethod
-	def _handle_pause(instruction):
-		timeout = int(instruction.attrib["timeout"]) / 1000
-		sleep(timeout)
-		return (True, "Пауза на %s миллисекунд\n" % timeout)
+		Returns True, if instruction has successfully completed or False otherwise
+		"""
+		if data is None:
+			self._test_log += strftime("(%d.%m.%Y) %Hh:%Mm:%Ss") + "\t[Catch]     There is no data to catch, you must use this instruction in the recv section\n"
+			return False
+		# Finding all possible matches with the regular expression
+		matches = instruction.regexp.findall(data)
+		# Choosing the right match
+		try:
+			match = matches[instruction.match]
+		except IndexError:
+		    self._test_log += strftime("(%d.%m.%Y) %Hh:%Mm:%Ss") + "\t[Catch]     There is no rigth match to regexp %s" % str(instruction.regexp)[11:-1]
+		    return False
+		# Splitting the variables string into words
+		variables = instruction.assign_to.split(",")
+		if type(match) == tuple:
+			if len(match) != len(variables):
+				self._test_log += strftime("(%d.%m.%Y) %Hh:%Mm:%Ss") + "\t[Catch]     The number of values in the match group '%s' is not equal to the number of values in the assign_to group '%s'\n" % (len(match), len(variables))
+				return False
+		elif len(variables) != 1:
+			self._test_log += strftime("(%d.%m.%Y) %Hh:%Mm:%Ss") + "\t[Catch]     The number of values in the match group '1' is not equal to the number of values in the assign_to group '%s'\n" % len(variables)
+			return False
+		# Declaring variables in the local scenario namespace
+		for number, variable in enumerate(variables):
+			if type(match) == tuple:
+				self._local_variables[variable] = match[number]
+			else:
+				self._local_variables[variable] = match
+		self._test_log += strftime("(%d.%m.%Y) %Hh:%Mm:%Ss") + "\t[Catch]     The match groups '%s' has been written to variables '%s'\n" % (str(match), ", ".join(variables))
+		print(self._local_variables)
+		return True
+
+	def _handle_pause(self, instruction, *args):
+		"""Executes the pause instruction of the test scenario
+
+		Suspends the test execution for timeout duration
+		"""
+		sleep(instruction.timeout / 1000)
+		self._test_log += strftime("(%d.%m.%Y) %Hh:%Mm:%Ss") + "\t[Pause]     Suspended by %s milliseconds\n" % instruction.timeout
+		return True
 
 	def _handle_nop(self, instructions):
-		log = ""
-		#Исполнение вложенных инструкций
-		for instruction in instructions:
-			result, action_log = self._command_handlers[instruction.tag](instruction)
-			log += action_log
-			if not result:
-				return (False, log)
-		return (True, log)
+		"""Executes the action instruction without binding to Megaco protocol
+
+		If the result of execution of the action block is False, the handler terminates the scenario execution and returns False
+		Returns True otherwise
+		"""
+		if not self._handle_actions(instructions):
+			return False
+		return True
 
 	def _handle_compare(self, instruction, *args):
-		#Получение значений атрибутов инструкции
-		result, first_group = self._replace_variables(instruction.attrib["first"])
-		if not result:
-			return (False, first_group)
-		result, second_group = self._replace_variables(instruction.attrib["second"])
-		if not result:
-			return (False, second_group)
-		#Формирование групп значений переменных для попарного сравнения
-		first_group = first_group.split(",")
-		second_group = second_group.split(",")
-		#Группы сравнения должны иметь одинаковое количество переменных
-		if len(first_group) != len(second_group):
-			return (False, "Группы сравнения имеют разное количество переменных\n")
-		#Попарное сравнение значений переменных
-		log = ""
-		for i in range(len(first_group)):
-			if first_group[i] != second_group[i]:
-				#Выполнение вложенных инструкций при неравенстве значений переменных
-				for action in instruction:
-					result, action_log = self._command_handlers[action.tag](action)
-					log += action_log
-					if not result:
-						return (False, "Сравнение переменных неуспешно\n" + log)
-				return (False, "Сравнение переменных неуспешно\n" + log)
-		return (True, "Сравнение переменных прошло успешно\n")
+		"""Executes the compare instruction of the test scenario
+
+		Returns True, if instruction has successfully completed or False otherwise
+		"""
+		success, reason, first = self._replace_variables(instruction.first)    # Changing variables to their values
+		if not success:
+			self._test_log += strftime("(%d.%m.%Y) %Hh:%Mm:%Ss") + "\t[Compare]   " + reason + "\n"
+			return False
+		success, reason, second = self._replace_variables(instruction.second)  # Changing variables to their values
+		if not success:
+			self._test_log += strftime("(%d.%m.%Y) %Hh:%Mm:%Ss") + "\t[Compare]   " + reason + "\n"
+			return False
+		# Splitting the strings into words
+		first, second = first.split(","), second.split(",")
+		if len(first) != len(second):
+			self._test_log += strftime("(%d.%m.%Y) %Hh:%Mm:%Ss") + "\t[Compare]   The number of values in first group '%s' is not equal to the number of values in second group '%s'\n" % (len(first), len(second))
+			return False
+		# Pairwise values comparison
+		for number in range(len(first)):
+			if first[number] != second[number]:
+				self._test_log += strftime("(%d.%m.%Y) %Hh:%Mm:%Ss") + "\t[Compare]   The value '%s' of the variable '%s' is not equal to the value '%s' of the variable '%s'\n" % (first[number], instruction.first.split(",")[number], second[number], instruction.second.split(",")[number])
+				# Executing nested instructions under the inequality of compared variables
+				for action in instruction.instructions:
+					if not self._command_handlers[action.__class__.__name__](action):
+						return False
+				return False
+		self._test_log += strftime("(%d.%m.%Y) %Hh:%Mm:%Ss") + "\t[Compare]   Values from the first group are absolutely equal to values from the second group\n"
+		return True
 
 	def _handle_assign(self, instruction, *args):
 		"""Executes the assign instruction of the test scenario
 
 		Returns True, if instruction has successfully completed or False otherwise
 		"""
-		success, reason, values = self._replace_variables(instruction.values)     # Changing variables to their values
+		success, reason, values = self._replace_variables(instruction.values)     
 		if not success:
-			self._test_log += strftime("(%d.%m.%Y) %Hh:%Mm:%Ss") + "\t[Assign]  " + reason + "\n"
+			self._test_log += strftime("(%d.%m.%Y) %Hh:%Mm:%Ss") + "\t[Assign]    " + reason + "\n"
 			return False
 		variables, values = instruction.to.split(","), values.split(",")          # Splitting the strings into words
 		if len(variables) != len(values):
-			self._test_log += strftime("(%d.%m.%Y) %Hh:%Mm:%Ss") + "\t[Assign]  The number of assignable values '%s' is not equal to the number of declared variables '%s'\n" % (len(values), len(variables))
+			self._test_log += strftime("(%d.%m.%Y) %Hh:%Mm:%Ss") + "\t[Assign]    The number of assignable values '%s' is not equal to the number of declared variables '%s'\n" % (len(values), len(variables))
 			return False
 		for number, variable in enumerate(variables):                             # Declaring variables in the local scenario namespace
 			self._local_variables[variable] = values[number]
-		self._test_log += strftime("(%d.%m.%Y) %Hh:%Mm:%Ss") + "\t[Assign]  User variables '%s' were successfully defined in the local namespace\n" % ", ".join(variables)
-		print(self._local_variables)
-		print(ScenarioInterpreter._global_variables)
+		self._test_log += strftime("(%d.%m.%Y) %Hh:%Mm:%Ss") + "\t[Assign]    User variables '%s' were successfully defined in the local namespace\n" % ", ".join(variables)
 		return True
 
 	def _handle_print(self, instruction, *args):
-		result, text = self._replace_variables(instruction.attrib["text"])
-		if not result:
-			return (False, text + "\n")
-		return (True, text + "\n")
+		"""Executes the print instruction of the test scenario
+
+		Returns True, if instruction has successfully completed or False otherwise
+		"""
+		success, reason, text = self._replace_variables(instruction.text)  # Changing variables to their values
+		if not success:
+			self._test_log += strftime("(%d.%m.%Y) %Hh:%Mm:%Ss") + "\t[Print]     " + reason + "\n"
+			return False
+		self._test_log += strftime("(%d.%m.%Y) %Hh:%Mm:%Ss") + "\t[Print]     " +  text + "\n"
+		return True
 
 	def _handle_exit(self, instruction, *args):
-		#Получение значений атрибутов инструкции
-		success = True if instruction.attrib["success"] == "true" else False
-		result, info = self._replace_variables(instruction.attrib["info"])
-		if not result:
-			return (False, info + "\n")
-		if success:
-			self._successfull_exit_flag.set()
-		return (False, info + "\n")
+		"""Executes the exit instruction of the test scenario"""
+		if instruction.status == "success":
+			self._successfull_exit_flag.set()                                  # Note that the output is successful
+		if instruction.info is not None:
+			success, reason, info = self._replace_variables(instruction.info)  # Changing variables to their values
+			if not success:
+				self._test_log += strftime("(%d.%m.%Y) %Hh:%Mm:%Ss") + "\t[Exit]      " + reason + "\n"
+			else:
+				self._test_log += strftime("(%d.%m.%Y) %Hh:%Mm:%Ss") + "\t[Exit]      " + info + "\n"
+		return False
 
 	def execute(self, scenario):
 		"""Executes the test scenario
@@ -287,7 +317,7 @@ class ScenarioInterpreter:
 		# Execution of the scenario instructions
 		for instruction in scenario:
 			if not self._command_handlers[instruction.__class__.__name__](instruction):
-				# Test result is True, if the exit status was successful 
+				# Test result is True, if the exit status is successful 
 				if self._successfull_exit_flag.isSet():
 					return (True, self._test_log, self._test_dump)
 				else:

@@ -1,3 +1,5 @@
+from re import compile
+
 class ScenarioBuilder:
 	"""Class for building the Scenario instance from validated contents of the test file"""
 
@@ -61,11 +63,9 @@ class ScenarioBuilder:
 
 	def _make_catch(self, component):
 		"""Builds and returns the Catch instruction of the Scenario instance"""
-		catch = Scenario.Catch(component.attrib["regexp"], component.attrib["assign_to"])
-		if "overlap" in component.attrib:
-			catch.overlap = int(component.attrib["overlap"])
-		if "check_it" in component.attrib:
-			catch.check_it = True if component.attrib["check_it"] == "true" else False
+		catch = Scenario.Catch(compile(component.attrib["regexp"]), component.attrib["assign_to"])
+		if "match" in component.attrib:
+			catch.match = int(component.attrib["match"])
 		return catch
 
 	def _make_compare(self, component):
@@ -164,8 +164,7 @@ class Scenario:
 
 		def __init__(self, regexp, assign_to):
 			self.regexp = regexp
-			self.overlap = 0
-			self.check_it = True
+			self.match = 0
 			self.assign_to = assign_to
 
 	class Compare:

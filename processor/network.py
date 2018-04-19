@@ -1,5 +1,6 @@
 from socket import socket, AF_INET, SOCK_DGRAM, SOL_SOCKET, SO_REUSEADDR
 from socket import timeout as sock_timeout
+from binascii import hexlify
 from sys import exit
 
 class NetworkAdapter:
@@ -32,22 +33,22 @@ class NetworkAdapter:
 		return (True, "Сообщение успешно отправлено\n")
 
 	def recv(self, from_node, timeout):
-		#Установка таймаута на прием сообщения
-		self._socket.settimeout(timeout/1000)
+		"""Receives a message from a remote node
+
+		Returns the action result, action log, remote node properties and received data
+		"""
+		self._socket.settimeout(timeout/1000)    # Setting a timeout for the receiving action
 		try:
 			data, node = self._socket.recvfrom(self.buffer)
-		except (OSError,IOError,sock_timeout) as error_info:
-			return (False, "Ошибка приема сообщения: '%s'\n" % str(error_info), None)
+		except (OSError, IOError, sock_timeout) as error:
+			return (False, "Message has not received: " + str(error), None)
 		else:
-			if node != self._routes[from_node]:
-				return (False, "Ошибка приема сообщения: неверный адрес удаленного хоста '%s:%s'\n" % node, None)
-		return (True, "Сообщение успешно принято\n", data.decode())
+			if node != self._routes[from_node]:  # The message must be received from the expected node
+				return (False, "Message has received from unexpeted node '%s:%s'" % node, hexlify(data).decode("ascii"))
+		return (True, "Message has successfully received from node '%s:%s'" % node, data.decode())
 
 	def close(self):
 		self._socket.close()
 
-	def __str__(self):
-		return "Network adapter for Node '%s'" % self.node_id
-
 	def __repr__(self):
-		return self.__str__()
+		return "Network adapter for Node '%s'" % self.node_id

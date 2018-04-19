@@ -76,7 +76,7 @@ class ScenarioBuilder:
 
 	def _make_assign(self, component):
 		"""Builds and returns the Assign instruction of the	Scenario instance"""
-		return Scenario.Assign(component.attrib["value"], component.attrib["to"])
+		return Scenario.Assign(component.attrib["values"], component.attrib["to"])
 
 	def _make_print(self, component):
 		"""Builds and returns the Print instruction of the Scenario instance"""
@@ -177,8 +177,8 @@ class Scenario:
 
 	class Assign:
 
-		def __init__(self, value, to):
-			self.value = value
+		def __init__(self, values, to):
+			self.values = values
 			self.to = to
 
 	class Print:

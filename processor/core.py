@@ -1,6 +1,6 @@
 from threading import Thread
 from queue import Queue, Empty
-from processor.interpreter import Interpreter
+from processor.interpreter import ScenarioInterpreter
 
 class Processor(Thread):
 
@@ -16,13 +16,13 @@ class Processor(Thread):
 		super().__init__()
 		self.test_queue = test_queue
 		self.log_queue = log_queue
-		Processor._interpreter = Interpreter(config)
+		Processor._interpreter = ScenarioInterpreter(config)
 
 	def _execute_test(self, test):
 		#Выполнение тестового сценария интерпретатором
-		result, log = Processor._interpreter.execute(test.scenario)
+		result, log, dump = Processor._interpreter.execute(test.scenario)
 		#Отправка отчета о выполнении теста
-		self.log_queue.put(Frame(Frame.REPORT, Frame.Report(Frame.Report.EXECUTE, result, log, test_name=test.name)))
+		self.log_queue.put(Frame(Frame.REPORT, Frame.Report(Frame.Report.EXECUTE, result, log, dump, test.name)))
 
 	def run(self):
 		#Запуск интерпретации тестовых сценариев

@@ -50,8 +50,8 @@ class ScenarioBuilder:
 			recv = Scenario.Recv(int(component.attrib["connection"]), int(component.attrib["timeout"]))
 		else:
 			recv = Scenario.Recv(int(component.attrib["connection"]))
-		# Building an actions list
-		recv.instructions = [self._makers[instruction.tag](instruction) for instruction in component if instruction.tag in self._makers]
+		# Building an Actions instruction
+		recv.instructions = self._make_actions(component.getchildren()[0]) if component.getchildren() else []
 		# Adding the created Recv instruction to Scenario instructions
 		self._scenario.instructions.append(recv)
 
@@ -95,7 +95,7 @@ class ScenarioBuilder:
 		Adds created Nop instruction to Scenario instructions
 		"""
 		nop = Scenario.Nop()
-		nop.instructions = [self._makers[instruction.tag](instruction) for instruction in component if instruction.tag in self._makers]
+		nop.instructions = self._make_actions(component.getchildren()[0]) if component.getchildren() else []
 		self._scenario.instructions.append(nop)
 
 	def _make_pause(self, component):

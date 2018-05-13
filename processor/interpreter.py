@@ -123,7 +123,7 @@ class ScenarioInterpreter:
 		Adds users variables to local scenario namespace
 		"""
 		self._local_variables.update(instruction.variables)
-		self._test_log += strftime("(%d.%m.%Y) %Hh:%Mm:%Ss") + "\t[Define]    User variables '%s' were successfully defined in the local namespace\n\n" % ", ".join(instruction.variables.keys())
+		self._test_log += strftime("(%d.%m.%Y) %Hh:%Mm:%Ss") + "\t[Define]    User variables '%s' were successfully defined in the local namespace\n" % ", ".join(instruction.variables.keys())
 		return True
 
 	def _handle_recv(self, instruction):
@@ -177,7 +177,6 @@ class ScenarioInterpreter:
 		for instruction in instructions:
 			if not self._command_handlers[instruction.__class__.__name__](instruction, data):
 				return False
-		self._test_log += "\n"
 		return True
 
 	def _handle_catch(self, instruction, data=None):
@@ -194,7 +193,7 @@ class ScenarioInterpreter:
 		try:
 			match = matches[instruction.match]
 		except IndexError:
-		    self._test_log += strftime("(%d.%m.%Y) %Hh:%Mm:%Ss") + "\t[Catch]     There is no rigth match to regexp %s" % str(instruction.regexp)[11:-1]
+		    self._test_log += strftime("(%d.%m.%Y) %Hh:%Mm:%Ss") + "\t[Catch]     There is no rigth match to regexp %s\n" % str(instruction.regexp)[11:-1]
 		    return False
 		# Splitting the variables string into words
 		variables = instruction.assign_to.split(",")
@@ -212,7 +211,6 @@ class ScenarioInterpreter:
 			else:
 				self._local_variables[variable] = match
 		self._test_log += strftime("(%d.%m.%Y) %Hh:%Mm:%Ss") + "\t[Catch]     The match groups '%s' has been written to variables '%s'\n" % (str(match), ", ".join(variables))
-		print(self._local_variables)
 		return True
 
 	def _handle_pause(self, instruction, *args):
@@ -230,7 +228,7 @@ class ScenarioInterpreter:
 		If the result of execution of the action block is False, the handler terminates the scenario execution and returns False
 		Returns True otherwise
 		"""
-		if not self._handle_actions(instructions):
+		if not self._handle_actions(instructions.instructions):
 			return False
 		return True
 
@@ -260,7 +258,7 @@ class ScenarioInterpreter:
 				for action in instruction.instructions:
 					if not self._command_handlers[action.__class__.__name__](action):
 						return False
-				return False
+				return True
 		self._test_log += strftime("(%d.%m.%Y) %Hh:%Mm:%Ss") + "\t[Compare]   Values from the first group are absolutely equal to values from the second group\n"
 		return True
 

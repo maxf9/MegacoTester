@@ -84,7 +84,7 @@
 
 <xs:complexType name="NopInstruction">
 	<xs:choice>
-		<xs:element name="actions" type="ActionsInstruction" minOccurs="0"/>
+		<xs:element name="actions" type="ActionsInstruction" minOccurs="0" maxOccurs="1"/>
 	</xs:choice>
 </xs:complexType>
 

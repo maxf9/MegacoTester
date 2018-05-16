@@ -25,17 +25,7 @@ class FileSystem:
 	@staticmethod
 	def create_dir(path):
 		"""Creates directory according to path"""
-		if isdir(path):
-			FileSystem._clear_dir(path)
-		else:
-			makedirs(path)
-
-	@staticmethod
-	def _clear_dir(path):
-		"""Deletes all files from the directory according to path"""
-		for file in listdir(path):
-			if isfile(path + "/" + file):
-				remove(path + "/" + file)
+		makedirs(path)
 
 	@staticmethod
 	def is_acceptable_directory(path):

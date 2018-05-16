@@ -1,6 +1,6 @@
 from parser.scenario_builder import ScenarioBuilder
 from concurrent.futures import ThreadPoolExecutor
-from asyncio import get_event_loop, as_completed
+from asyncio import new_event_loop, as_completed
 from multiprocessing import cpu_count
 from threading import Thread
 from os.path import dirname
@@ -25,7 +25,7 @@ class TestParser(Thread):
 		self.log_queue = log_queue                  # FIFO queue to the TestLogger instance
 		self._validator = ScenarioValidator()       # Validator for the tests files
 		self._scenario_builder = ScenarioBuilder()  # Builder for the Scenario instance
-		self._event_loop = get_event_loop()         # Getting an event loop for asynchronous task processing
+		self._event_loop = new_event_loop()         # Getting an event loop for asynchronous task processing
 		self._thread_executor = ThreadPoolExecutor(max_workers=cpu_count())  # Thread pool for blocking tasks (number of workers = number of CPUs)
 
 	async def validate_test(self, content):
@@ -47,14 +47,14 @@ class TestParser(Thread):
 		if file_content is None:
 			# Sending a scenario load error report
 			self.log_queue.put(Frame(Frame.REPORT, Frame.Report(Frame.Report.PARSE,
-				                                 	            log="Test Error: can't parse the test file '%s'. Details: file does't exist or no permission to read it" % file,
+				                                 	            log="Test Error: can't parse the test file '%s'. Details: file does't exist or no permission to read it\n" % file,
 				                                 	            success=False)))
 			return
 		result, content = await TestParser.decode_xml(file_content)  # Decodes the xml scenario
 		if not result:
 			# Sending a scenario decode error report
 			self.log_queue.put(Frame(Frame.REPORT, Frame.Report(Frame.Report.PARSE,
-				                                 	            log="Test Error: can't parse the test file '%s'. Details: %s" % (file, content),
+				                                 	            log="Test Error: can't parse the test file '%s'. Details: %s\n" % (file, content),
 				                                 	            success=False)))
 			return
 		return content
@@ -71,12 +71,12 @@ class TestParser(Thread):
 		if not result:
 		    # Sending a scenario validation error report
 		    self.log_queue.put(Frame(Frame.REPORT, Frame.Report(Frame.Report.PARSE,
-				                                 	            log="Test Error: can't parse the test file '%s'. Details: %s" % (file, reason),
+				                                 	            log="Test Error: can't parse the test file '%s'. Details: %s\n" % (file, reason),
 				                                 	            success=False)))
 		    return
 		# Sending a report on the successful parsing of the test scenario
 		self.log_queue.put(Frame(Frame.REPORT, Frame.Report(Frame.Report.PARSE,
-				                                 	        log="File '%s' is successfully parsed" % file,
+				                                 	        log="File '%s' is successfully parsed\n" % file,
 				                                 	        success=True)))
 		return content
 

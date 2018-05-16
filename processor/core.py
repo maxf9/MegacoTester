@@ -12,11 +12,11 @@ class Processor(Thread):
 			Processor._instance = object.__new__(cls)
 		return Processor._instance
 
-	def __init__(self, config, test_queue, log_queue):
+	def __init__(self, config, result_directory, test_queue, log_queue):
 		super().__init__()
 		self.test_queue = test_queue
 		self.log_queue = log_queue
-		Processor._interpreter = ScenarioInterpreter(config)
+		Processor._interpreter = ScenarioInterpreter(config, result_directory)
 
 	def _execute_test(self, test):
 		#Выполнение тестового сценария интерпретатором

@@ -27,7 +27,8 @@ class ScenarioInterpreter:
 			ScenarioInterpreter._instance = object.__new__(cls)
 		return ScenarioInterpreter._instance
 
-	def __init__(self, config):
+	def __init__(self, config, result_directory):
+		self.dump_directory = result_directory + "/Dump"
 		self._command_handlers = self._define_command_handlers()
 		self._network_adapters = ScenarioInterpreter._configure_adapters(config.connections, config.nodes)
 		self._routes = ScenarioInterpreter._configure_routes(config.connections)

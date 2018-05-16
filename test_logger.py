@@ -18,9 +18,11 @@ class TestLogger(Thread):
 
 	def _form_parse_log_output(self):
 		output = "SUCCESSFULLY PARSED:\n"
-		for log in self._parse_log["success"]: output += log
+		for log in self._parse_log["success"]: 
+			output += log
 		output += "\nUNSUCCESSFULLY PAPSED:\n"
-		for log in self._parse_log["failure"]: output += log 
+		for log in self._parse_log["failure"]: 
+			output += log 
 		return output
 
 	def _handle_report(self, report):
@@ -42,7 +44,8 @@ class TestLogger(Thread):
 				frame = self.log_queue.get(block=True, timeout=0.1)
 				if frame.header == Frame.STOP:
 					stop_counter += 1
-					if stop_counter == 2: break
+					if stop_counter == 2: 
+						break
 				else:
 					self._handle_report(frame.payload)
 			except Empty:

@@ -1,5 +1,7 @@
 from parser.scenario_builder import ScenarioBuilder
+from concurrent.futures import ThreadPoolExecutor
 from asyncio import get_event_loop, as_completed
+from multiprocessing import cpu_count
 from threading import Thread
 from os.path import dirname
 import lxml.etree as xml
@@ -24,15 +26,11 @@ class TestParser(Thread):
 		self._validator = ScenarioValidator()       # Validator for the tests files
 		self._scenario_builder = ScenarioBuilder()  # Builder for the Scenario instance
 		self._event_loop = get_event_loop()         # Getting an event loop for asynchronous task processing
+		self._thread_executor = ThreadPoolExecutor(max_workers=cpu_count())  # Thread pool for blocking tasks (number of workers = number of CPUs)
 
 	async def validate_test(self, content):
 		"""Asynchronous wrapper for the _validator.validate_scenario method"""
 		return self._validator.validate_scenario(content)
-
-	@staticmethod
-	async def load_file(file):
-		"""Asynchronous wrapper for the FileSystem.load_from method"""
-		return FileSystem.load_from(file)
 
 	@staticmethod
 	async def decode_xml(content):
@@ -44,7 +42,8 @@ class TestParser(Thread):
 
 		Returns decoded scenario content or None, if an error occurs
 		"""
-		file_content = await TestParser.load_file(file)  # Loads the xml scenario from test file
+		for blocking_task in as_completed([self._event_loop.run_in_executor(self._thread_executor, FileSystem.load_from, file)]):   
+			file_content = await blocking_task  # Loads the xml scenario from test file
 		if file_content is None:
 			# Sending a scenario load error report
 			self.log_queue.put(Frame(Frame.REPORT, Frame.Report(Frame.Report.PARSE,

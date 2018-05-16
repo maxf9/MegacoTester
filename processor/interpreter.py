@@ -34,7 +34,6 @@ class ScenarioInterpreter:
 		self._successfull_exit_flag = Event()
 		self._local_variables = None
 		self._test_log = None
-		self._test_dump = None
 		ScenarioInterpreter._build_global_variables_tree(config)
 
 	@staticmethod
@@ -311,13 +310,13 @@ class ScenarioInterpreter:
 		"""
 		self._local_variables = {}             # Setting up a local scenario namespace
 		self._successfull_exit_flag.clear()    # Resetting of the successful exit flag
-		self._test_log = self._test_dump = ""  # Initializing the test log and dump
+		self._test_log = ""                    # Initializing the test log
 		# Execution of the scenario instructions
 		for instruction in scenario:
 			if not self._command_handlers[instruction.__class__.__name__](instruction):
 				# Test result is True, if the exit status is successful 
 				if self._successfull_exit_flag.isSet():
-					return (True, self._test_log, self._test_dump)
+					return (True, self._test_log)
 				else:
-					return (False, self._test_log, self._test_dump)
-		return (True, self._test_log, self._test_dump)
+					return (False, self._test_log)
+		return (True, self._test_log)

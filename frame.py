@@ -26,8 +26,9 @@ class Frame:
 
 		PARSE, EXECUTE = range(2)  # Defines the types of reported actions
 		
-		def __init__(self, action, success, log, test_name=None):
+		def __init__(self, action, success, log, dump=None, test_name=None):
 			self.action = action        # Reported action (PARSE or EXECUTE)
 			self.success = success      # Success indicator (True or False)
 			self.test_name = test_name  # Name of reported test
 			self.log = log              # Log of reported test
+			self.dump = dump

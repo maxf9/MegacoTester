@@ -1,6 +1,7 @@
 from asyncio import Task, new_event_loop, as_completed, ensure_future
 from concurrent.futures import ThreadPoolExecutor
 from multiprocessing import Process, cpu_count
+from scapy.all import wrpcap
 from time import strftime
 from queue import Empty
 import signal
@@ -47,6 +48,11 @@ class TestLogger(Process):
 	def _dump_test_parser_log(self):
 		FileSystem.dump_to(self.result_directory_name + "/" + "Test_Parser.log", self._form_test_parser_log())
 
+	@staticmethod
+	def _write_test_dump(pcap_file, dump):
+		for packet in dump:
+			wrpcap(pcap_file, packet, append=True)
+
 	async def _record_logs(self, report):
 		if report.action == Frame.Report.PARSE:
 			if report.success:
@@ -57,6 +63,9 @@ class TestLogger(Process):
 			test_log = ("EXECUTE STATUS: SUCCESS\n\n" if report.success else "EXECUTE STATUS: FAILURE\n\n") + report.log
 			for task in as_completed([self._event_loop.run_in_executor(self._thread_executor, FileSystem.dump_to, 
 				                                                       self.result_directory_name + "/Log/" + report.test_name + ".log", test_log)]):
+				await task
+			for task in as_completed([self._event_loop.run_in_executor(self._thread_executor, TestLogger._write_test_dump, 
+				                                                       self.result_directory_name + "/Dump/" + report.test_name + ".pcap", report.dump)]):
 				await task
 
 	async def _handle_reports(self):

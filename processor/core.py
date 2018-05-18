@@ -16,7 +16,7 @@ class Processor(Thread):
 		super().__init__()
 		self.test_queue = test_queue
 		self.log_queue = log_queue
-		Processor._interpreter = ScenarioInterpreter(config, result_directory)
+		Processor._interpreter = ScenarioInterpreter(config)
 
 	def _execute_test(self, test):
 		#Выполнение тестового сценария интерпретатором

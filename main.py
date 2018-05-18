@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-from sys import version_info, exit
-if version_info < (3,6):
+import sys
+if sys.version_info < (3,6):
 	print("Interpreter Error: use Python interpreter version 3.6 or greater")
-	exit(1)
+	sys.exit(1)
 
 # Importing class for working with file system
 from file_system import FileSystem
@@ -36,7 +36,8 @@ def main():
 			if process.is_alive():
 				process.terminate()
 				process.join()
-		exit(1)
+		print("\nSTOP!")
+		sys.exit(1)
 
 	signal(SIGINT, signal_handler)
 
@@ -69,4 +70,5 @@ def main():
 	test_logger.join()
 
 if __name__ == "__main__":
-	main()
+	with open("/dev/null") as sys.stderr:
+		main()

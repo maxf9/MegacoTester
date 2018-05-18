@@ -1,11 +1,11 @@
 from asyncio import new_event_loop, as_completed
 from concurrent.futures import ThreadPoolExecutor
-from multiprocessing import cpu_count
-from threading import Thread
+from multiprocessing import Process, cpu_count
 from queue import Empty
 from time import strftime
 
-class TestLogger(Thread):
+
+class TestLogger(Process):
 
 	_instance = None
 	

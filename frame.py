@@ -17,9 +17,9 @@ class Frame:
 		The Test instance has two mandatory fields: name and scenario
 		"""
 		
-		def __init__(self, name, scenario):
+		def __init__(self, name, instructions):
 			self.name = name
-			self.scenario = scenario
+			self.instructions = instructions
 
 	class Report:
 		"""Class that defines the Report payload of Frame"""

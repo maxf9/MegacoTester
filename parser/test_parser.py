@@ -1,14 +1,11 @@
-from parser.scenario_builder import ScenarioBuilder
 from concurrent.futures import ThreadPoolExecutor
 from asyncio import new_event_loop, as_completed
-from multiprocessing import cpu_count
-from threading import Thread
+from multiprocessing import Process, cpu_count
 from os.path import dirname
 import lxml.etree as xml
 from sys import exit
 
-
-class TestParser(Thread):
+class TestParser(Process):
 	"""Class for parsing test files"""
 
 	_instance = None
@@ -24,7 +21,6 @@ class TestParser(Thread):
 		self.test_queue = test_queue                # FIFO queue to the Processor instance 
 		self.log_queue = log_queue                  # FIFO queue to the TestLogger instance
 		self._validator = ScenarioValidator()       # Validator for the tests files
-		self._scenario_builder = ScenarioBuilder()  # Builder for the Scenario instance
 		self._event_loop = new_event_loop()         # Getting an event loop for asynchronous task processing
 		self._thread_executor = ThreadPoolExecutor(max_workers=cpu_count())  # Thread pool for blocking tasks (number of workers = number of CPUs)
 
@@ -88,8 +84,8 @@ class TestParser(Thread):
 			content = await task
 			# Sending the test to the Processor instance
 			if content is not None:
-				self.test_queue.put(Frame(Frame.TEST, Frame.Test("Test_%s_%s" % (number, content.attrib["name"]),
-				                                                 self._scenario_builder.build_scenario(content))))
+				self.test_queue.put(Frame(Frame.TEST, Frame.Test("Test_%s_%s" % (number, content.attrib["name"]), 
+					                                              xml.tostring(content, method="xml"))))
 
 	def run(self):
 		# Running the asynchronous event loop

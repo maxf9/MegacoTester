@@ -20,7 +20,7 @@ from test_logger import TestLogger
 
 # Importing classes for main instances interaction
 from frame import Frame
-from queue import Queue
+from multiprocessing import Queue
 
 # Make FileSystem and Frame classes available in all modules
 setattr(__builtins__, 'FileSystem', FileSystem)

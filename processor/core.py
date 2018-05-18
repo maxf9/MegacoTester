@@ -1,10 +1,14 @@
-from threading import Thread
-from queue import Queue, Empty
 from processor.interpreter import ScenarioInterpreter
+from processor.scenario_builder import ScenarioBuilder
+from multiprocessing import Process
+from queue import Empty
+import lxml.etree as xml
 
-class Processor(Thread):
+
+class Processor(Process):
 
 	_instance = None
+	_builder = None
 	_interpreter = None
 
 	def __new__(cls, *args, **kwargs):
@@ -16,11 +20,13 @@ class Processor(Thread):
 		super().__init__()
 		self.test_queue = test_queue
 		self.log_queue = log_queue
+		Processor._builder = ScenarioBuilder()
 		Processor._interpreter = ScenarioInterpreter(config)
 
 	def _execute_test(self, test):
+		scenario = Processor._builder.build_scenario(xml.fromstring(test.instructions))
 		#Выполнение тестового сценария интерпретатором
-		result, log = Processor._interpreter.execute(test.scenario)
+		result, log = Processor._interpreter.execute(scenario)
 		#Отправка отчета о выполнении теста
 		self.log_queue.put(Frame(Frame.REPORT, Frame.Report(Frame.Report.EXECUTE, result, log, test.name)))
 

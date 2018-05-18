@@ -1,9 +1,9 @@
-from asyncio import new_event_loop, as_completed
+from asyncio import Task, new_event_loop, as_completed, ensure_future
 from concurrent.futures import ThreadPoolExecutor
 from multiprocessing import Process, cpu_count
-from queue import Empty
 from time import strftime
-
+from queue import Empty
+import signal
 
 class TestLogger(Process):
 
@@ -23,6 +23,12 @@ class TestLogger(Process):
 		self._stop_counter = 0
 		self._parse_logs = {"success" : [], "failure" : []}
 		self._create_result_directory()
+
+	def signal_handler(self):
+		self._thread_executor.shutdown(wait=False)
+		[task.cancel() for task in Task.all_tasks() if task is not Task.current_task()]
+		self._event_loop.stop()
+		self._dump_test_parser_log()
 
 	def _create_result_directory(self):
 		FileSystem.create_dir(self.result_directory_name)
@@ -67,6 +73,8 @@ class TestLogger(Process):
 					break
 
 	def run(self):
+		for signame in ("SIGINT", "SIGTERM"):
+			self._event_loop.add_signal_handler(getattr(signal, signame), lambda: ensure_future(self.signal_handler()))
 		self._event_loop.run_until_complete(self._handle_reports())
 		self._event_loop.close()
 		self._dump_test_parser_log()

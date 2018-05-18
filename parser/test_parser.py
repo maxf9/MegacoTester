@@ -1,9 +1,10 @@
+from asyncio import Task, new_event_loop, as_completed, ensure_future
 from concurrent.futures import ThreadPoolExecutor
-from asyncio import new_event_loop, as_completed
 from multiprocessing import Process, cpu_count
 from os.path import dirname
 import lxml.etree as xml
 from sys import exit
+import signal
 
 class TestParser(Process):
 	"""Class for parsing test files"""
@@ -23,6 +24,11 @@ class TestParser(Process):
 		self._validator = ScenarioValidator()       # Validator for the tests files
 		self._event_loop = new_event_loop()         # Getting an event loop for asynchronous task processing
 		self._thread_executor = ThreadPoolExecutor(max_workers=cpu_count())  # Thread pool for blocking tasks (number of workers = number of CPUs)
+
+	def signal_handler(self):
+		self._thread_executor.shutdown(wait=False)
+		[task.cancel() for task in Task.all_tasks() if task is not Task.current_task()]
+		self._event_loop.stop()
 
 	async def validate_test(self, content):
 		"""Asynchronous wrapper for the _validator.validate_scenario method"""
@@ -88,6 +94,8 @@ class TestParser(Process):
 					                                              xml.tostring(content, method="xml"))))
 
 	def run(self):
+		for signame in ("SIGINT", "SIGTERM"):
+			self._event_loop.add_signal_handler(getattr(signal, signame), lambda: ensure_future(self.signal_handler()))
 		# Running the asynchronous event loop
 		self._event_loop.run_until_complete(self.main_coro())
 		# Stop the asynchronous event loop

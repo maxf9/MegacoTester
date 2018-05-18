@@ -4,7 +4,6 @@ from multiprocessing import Process
 from queue import Empty
 import lxml.etree as xml
 
-
 class Processor(Process):
 
 	_instance = None
@@ -15,6 +14,10 @@ class Processor(Process):
 		if Processor._instance is None:
 			Processor._instance = object.__new__(cls)
 		return Processor._instance
+
+	def terminate(self):
+		Processor._interpreter.stop_all_network_adapters()
+		super().terminate()
 
 	def __init__(self, config, result_directory, test_queue, log_queue):
 		super().__init__()

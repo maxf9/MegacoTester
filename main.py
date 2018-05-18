@@ -22,11 +22,24 @@ from test_logger import TestLogger
 from frame import Frame
 from multiprocessing import Queue
 
+# Importing functions and attributes for UNUX signal handling
+from signal import signal, SIGINT
+
 # Make FileSystem and Frame classes available in all modules
 setattr(__builtins__, 'FileSystem', FileSystem)
 setattr(__builtins__, 'Frame', Frame)
 
 def main():
+
+	def signal_handler(*args):
+		for process in (test_parser, processor, test_logger):
+			if process.is_alive():
+				process.terminate()
+				process.join()
+		exit(1)
+
+	signal(SIGINT, signal_handler)
+
 	# Parsing the command-line arguments
 	config_file, tests_files = ArgParser().parse_arguments()
 

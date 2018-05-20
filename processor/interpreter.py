@@ -1,3 +1,4 @@
+from processor.variables_tree_builder import VariablesTreeBuilder
 from processor.network import NetworkAdapter
 from time import sleep, strftime
 from threading import Event
@@ -7,7 +8,7 @@ from sys import exit
 class ScenarioInterpreter:
 
 	_instance = None
-	_global_variables = None
+	_global_variables_tree = None
 
 	def _define_command_handlers(self):
 		return { "Define" : self._handle_define,
@@ -34,11 +35,7 @@ class ScenarioInterpreter:
 		self._successfull_exit_flag = Event()
 		self._local_variables = None
 		self._test_log = None
-		ScenarioInterpreter._build_global_variables_tree(config)
-
-	@staticmethod
-	def _build_global_variables_tree(config):
-		ScenarioInterpreter._global_variables = config.globals
+		ScenarioInterpreter._global_variables_tree = VariablesTreeBuilder(config).build_tree()
 
 	@staticmethod
 	def fetch_item(id, items):
@@ -84,9 +81,10 @@ class ScenarioInterpreter:
 
 		Returns the changing result, error reason and string with replased variables (if result is True, None otherwise)
 		"""
-		for variable in set([var[3:-1] for var in findall(r"\[\$\$[A-Za-z0-9_]+\]", string)]):                    # Forming the set of global variables found in a string
-			if variable in ScenarioInterpreter._global_variables:
-				string = string.replace("[$$" + variable + "]", ScenarioInterpreter._global_variables[variable])  # Replacing a global variable with its value
+		for variable in set([var[3:-1] for var in findall(r"\[\$\$[A-Za-z0-9_.]+\]", string)]):  # Forming the set of global variables found in a string
+			value = ScenarioInterpreter._global_variables_tree.get_variable(variable.split("."))
+			if value is not None:
+				string = string.replace("[$$" + variable + "]", value)                           # Replacing a global variable with its value
 			else:
 				return (False, "Variable '%s' does not exist in the global namespace" % variable, None)
 		return (True, None, string)

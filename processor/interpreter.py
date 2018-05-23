@@ -1,5 +1,6 @@
 from processor.variables_tree_builder import VariablesTreeBuilder
 from processor.network import NetworkAdapter
+from processor.megaco import Megaco
 from time import sleep, strftime
 from threading import Event
 from re import findall
@@ -35,6 +36,7 @@ class ScenarioInterpreter:
 		self._successfull_exit_flag = Event()
 		self._local_variables = None
 		self._test_log = None
+		self._protocol = Megaco()
 		ScenarioInterpreter._global_variables_tree = VariablesTreeBuilder(config).build_tree()
 
 	@staticmethod
@@ -89,6 +91,16 @@ class ScenarioInterpreter:
 				return (False, "Variable '%s' does not exist in the global namespace" % variable, None)
 		return (True, None, string)
 
+	def _replace_protocol_variables(self, string):
+		for variable in set([var[3:-3] for var in findall(r"\[\$\$[A-Za-z0-9_]+\$\$\]", string)]):
+			value = self._protocol.generate_value(variable)
+			if value is not None:
+				string = string.replace("[$$" + variable + "$$]", value)
+				self._local_variables["last_" + variable] = value
+			else:
+				return (False, "Variable '%s' is not supported by Megaco protocol" % variable, None)
+		return (True, None, string)
+
 	def _replace_local_variables(self, string):
 		"""Replaces local variables in the string with their values
 
@@ -107,6 +119,9 @@ class ScenarioInterpreter:
 		Returns the changing result, error reason and string with replased variables (if result is True, None otherwise)
 		"""
 		success, reason, string = self._replace_local_variables(string)                  # Replacing variables from the local namespace
+		if not success:
+			return (False, reason, None)
+		success, reason, string = self._replace_protocol_variables(string)
 		if not success:
 			return (False, reason, None)
 		success, reason, string = ScenarioInterpreter._replace_global_variables(string)  # Replacing variables from	the global namespace

@@ -1,5 +1,5 @@
-from os import access, listdir, makedirs, remove, R_OK, X_OK
-from os.path import isfile, isdir
+from os import access, makedirs, R_OK, X_OK
+from os.path import isfile, isdir, dirname
 
 class FileSystem:
 	"""Static class for working with file system"""
@@ -35,3 +35,7 @@ class FileSystem:
 		"""
 		if isdir(path) and access(path, X_OK):
 			return True
+
+	@staticmethod
+	def get_current_path():
+		return dirname(__file__)

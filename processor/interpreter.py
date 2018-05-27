@@ -7,11 +7,13 @@ from re import findall
 from sys import exit
 
 class ScenarioInterpreter:
+	"""Class for Scenario instances interpretation"""
 
 	_instance = None
 	_global_variables_tree = None
 
 	def _define_command_handlers(self):
+		"""Defines command handlers for scenario instructions executing"""
 		return { "Define" : self._handle_define,
 		         "Send" : self._handle_send,
 		         "Recv" : self._handle_recv,

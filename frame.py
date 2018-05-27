@@ -14,7 +14,7 @@ class Frame:
 	class Test:
 		"""Class that defines the Test payload of Frame
 
-		The Test instance has two mandatory fields: name and scenario
+		The Test instance has two mandatory fields: name and instructions
 		"""
 		
 		def __init__(self, name, instructions):
@@ -29,6 +29,6 @@ class Frame:
 		def __init__(self, action, success, log, dump=None, test_name=None):
 			self.action = action        # Reported action (PARSE or EXECUTE)
 			self.success = success      # Success indicator (True or False)
-			self.test_name = test_name  # Name of reported test
-			self.log = log              # Log of reported test
-			self.dump = dump
+			self.test_name = test_name  # Reported test name
+			self.log = log              # Reported test log
+			self.dump = dump            # Reported test dump

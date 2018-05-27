@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
 
-<!-- definition of simple types -->
+<!-- Simple types definition -->
 <xs:simpleType name="NamePattern">
 	<xs:restriction base="xs:string">
 		<xs:pattern value="[a-zA-Z0-9_]+"/>
@@ -22,7 +22,7 @@
 </xs:simpleType>
 
 
-<!-- definition of simple scenario instructions -->
+<!-- Simple scenario instructions definition -->
 <xs:complexType name="SendInstruction">
   <xs:simpleContent>
     <xs:extension base="xs:string">
@@ -76,7 +76,7 @@
 </xs:complexType>  
 
 
-<!-- definition of complex scenario instructions -->
+<!-- Complex scenario instructions definition -->
 <xs:complexType name="ActionsInstruction">
 	<xs:choice maxOccurs="unbounded">
 		<xs:element name="assign" type="AssignInstruction" minOccurs="0" maxOccurs="unbounded"/>
@@ -115,7 +115,7 @@
 </xs:complexType>
 
    
-<!-- definition of scenario composition -->
+<!-- Scenario composition -->
 <xs:element name="scenario">
 	<xs:complexType>
 		<xs:choice maxOccurs="unbounded">

@@ -1,6 +1,6 @@
 {
 	"$schema" : "http://json-schema.org/draft-04/schema#",
-	"title" : "schema for config file",
+	"title" : "Config file schema",
 	"type" : "object",
 	"properties" : {
 		"LogDirectory" : {"type" : "string", "minLength" : 1},

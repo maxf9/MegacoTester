@@ -87,8 +87,8 @@ class Config:
 
 	class Node:
 
-		def __init__(self, nid, ip_address, port):
-			self.id = nid
+		def __init__(self, node_id, ip_address, port):
+			self.id = node_id
 			self.name = ""
 			self.ip_address = ip_address
 			self.port = port
@@ -99,8 +99,8 @@ class Config:
 
 	class Connection:
 
-		def __init__(self, cid, from_node, to_node):
-			self.id = cid
+		def __init__(self, conn_id, from_node, to_node):
+			self.id = conn_id
 			self.name = ""
 			self.from_node = from_node
 			self.to_node = to_node

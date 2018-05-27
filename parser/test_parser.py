@@ -1,10 +1,9 @@
 from asyncio import Task, new_event_loop, as_completed, ensure_future
 from concurrent.futures import ThreadPoolExecutor
 from multiprocessing import Process, cpu_count
-from os.path import dirname
 import lxml.etree as xml
-from sys import exit
 import signal
+import sys
 
 class TestParser(Process):
 	"""Class for parsing test files"""
@@ -26,9 +25,14 @@ class TestParser(Process):
 		self._thread_executor = ThreadPoolExecutor(max_workers=cpu_count())  # Thread pool for blocking tasks (number of workers = number of CPUs)
 
 	def signal_handler(self):
-		self._thread_executor.shutdown(wait=False)
-		[task.cancel() for task in Task.all_tasks() if task is not Task.current_task()]
-		self._event_loop.stop()
+		"""Signal handler for asynchronous event loop
+
+		Stops it gracefully
+		"""
+		with open("/dev/null") as sys.stderr:
+			self._thread_executor.shutdown(wait=False)
+			[task.cancel() for task in Task.all_tasks() if task is not Task.current_task()]
+			self._event_loop.stop()
 
 	async def validate_test(self, content):
 		"""Asynchronous wrapper for the _validator.validate_scenario method"""
@@ -94,6 +98,7 @@ class TestParser(Process):
 					                                              xml.tostring(content, method="xml"))))
 
 	def run(self):
+		# Add SIGINT and SIGTERM trap for event loop
 		for signame in ("SIGINT", "SIGTERM"):
 			self._event_loop.add_signal_handler(getattr(signal, signame), lambda: ensure_future(self.signal_handler()))
 		# Running the asynchronous event loop
@@ -107,12 +112,9 @@ class TestParser(Process):
 class ScenarioValidator:
 	"""Class for validating the tests files contents"""
 
-	# Absolute path to schema for tests files
-	_schema_file = dirname(__file__) + "/schema/scenario.xsd"
-
 	def __init__(self):
 		# Making the schema instance for validation of tests files contents 
-		self._schema = xml.XMLSchema(xml.XML(FileSystem.load_from(ScenarioValidator._schema_file)))
+		self._schema = xml.XMLSchema(xml.XML(FileSystem.load_from(FileSystem.get_current_path() + "/parser/schema/scenario.xsd")))
 	
 	def validate_scenario(self, content):
 		"""Validates the testing scenario contents according to the schema

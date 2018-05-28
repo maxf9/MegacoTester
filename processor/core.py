@@ -26,6 +26,7 @@ class Processor(Process):
 
 		Stops sniffing and closes all network sockets before termination
 		"""
+		AppLogger.warning("Stop tests execution")
 		with open("/dev/null") as sys.stderr:
 			Processor._sniffer.stop(no_wait=True)
 			Processor._interpreter.stop_all_network_adapters()

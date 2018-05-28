@@ -32,27 +32,29 @@ class ScenarioInterpreter:
 		return ScenarioInterpreter._instance
 
 	def __init__(self, config):
-		self._command_handlers = self._define_command_handlers()
-		self._network_adapters = ScenarioInterpreter._configure_adapters(config.connections, config.nodes)
-		self._routes = ScenarioInterpreter._configure_routes(config.connections)
-		self._successfull_exit_flag = Event()
-		self._local_variables = None
-		self._test_log = None
-		self._protocol = Megaco()
-		ScenarioInterpreter._global_variables_tree = VariablesTreeBuilder(config).build_tree()
+		self._command_handlers = self._define_command_handlers()  # Defines scenario command handlers 
+		self._network_adapters = ScenarioInterpreter._configure_adapters(config.connections, config.nodes)  # Configures network adapters for defined connections
+		self._routes = ScenarioInterpreter._configure_routes(config.connections)  # Configures and returns routes to connected nodes
+		self._successfull_exit_flag = Event()  # Indicates successful scenario exit
+		self._local_variables = None  # Local scenario namespace
+		self._test_log = None         # For test log collection
+		self._protocol = Megaco()     # Megaco protocol instance
+		ScenarioInterpreter._global_variables_tree = VariablesTreeBuilder(config).build_tree()  # Global variables tree (Global namespace)
 
 	@staticmethod
-	def fetch_item(id, items):
+	def _fetch_item(node_id, items):
+		"""Searchs for and returns Node instance specified by node_id"""
 		for item in items:
-			if item.id == id:
+			if item.id == node_id:
 				break
 		else:
-			print("Объект 'Node' с id=%s не найден в конфигурационном файле" % id)
+			AppLogger.error("Node instance with id='%s' defined in 'Connections' is not exist in 'Nodes' section" % node_id)
 			exit(1)
 		return item
 
 	@staticmethod
 	def _configure_adapters(connections, nodes):
+		"""Configures network adapters for defined connections by pattern (connections_id tuple) : adapter"""
 		config_data = {}
 		for connection in connections:
 			if connection.from_node not in config_data:
@@ -61,16 +63,18 @@ class ScenarioInterpreter:
 				config_data[connection.from_node] += [connection.id]
 		network_adapters = {}
 		for key,value in config_data.items():
-			network_adapters[tuple(value)] = NetworkAdapter(ScenarioInterpreter.fetch_item(key, nodes),
-			*[ScenarioInterpreter.fetch_item(ScenarioInterpreter.fetch_item(i,connections).to_node, nodes) for i in value])
+			network_adapters[tuple(value)] = NetworkAdapter(ScenarioInterpreter._fetch_item(key, nodes),
+			*[ScenarioInterpreter._fetch_item(ScenarioInterpreter._fetch_item(i,connections).to_node, nodes) for i in value])
 		return network_adapters
 
 	def stop_all_network_adapters(self):
+		"""Closes all open network sockets"""
 		for network_adapter in self._network_adapters.values():
 			network_adapter.close()
 
 	@staticmethod
 	def _configure_routes(connections):
+		"""Configures and returns routes to connected nodes (dictionary by the pattern "connection_id : connected_node")"""
 		return dict([(connection.id, connection.to_node) for connection in connections])
 
 	def _get_network_adapter(self, connection):
@@ -94,11 +98,15 @@ class ScenarioInterpreter:
 		return (True, None, string)
 
 	def _replace_protocol_variables(self, string):
+		"""Replaces protocol variable in the string with their values
+
+		Returns the changing result, error reason and string with replased variables (if result is True, None otherwise)
+		"""
 		for variable in set([var[3:-3] for var in findall(r"\[\$\$[A-Za-z0-9_]+\$\$\]", string)]):
-			value = self._protocol.generate_value(variable)
+			value = self._protocol.generate_value(variable)               # Forming the set of local variables with their values found in a string
 			if value is not None:
-				string = string.replace("[$$" + variable + "$$]", value)
-				self._local_variables["last_" + variable] = value
+				string = string.replace("[$$" + variable + "$$]", value)  # Replacing a protocol variable with its value
+				self._local_variables["last_" + variable] = value         # Add protocol variable with the "last_" prefix to local scenario namespace
 			else:
 				return (False, "Variable '%s' is not supported by Megaco protocol" % variable, None)
 		return (True, None, string)

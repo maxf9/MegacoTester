@@ -3,7 +3,8 @@ from processor.network import NetworkAdapter
 from processor.megaco import Megaco
 from time import sleep, strftime
 from threading import Event
-from re import findall
+from re import findall, compile as re_compile
+from sre_constants import error as re_compile_error
 from sys import exit
 
 class ScenarioInterpreter:
@@ -208,6 +209,12 @@ class ScenarioInterpreter:
 		"""
 		if data is None:
 			self._test_log += strftime("(%d.%m.%Y) %Hh:%Mm:%Ss") + "\t[Catch]     There is no data to catch, you must use this instruction in the recv section\n"
+			return False
+		# Compiling the regular expression
+		try:
+			instruction.regexp = re_compile(instruction.regexp)
+		except re_compile_error as error:
+			self._test_log += strftime("(%d.%m.%Y) %Hh:%Mm:%Ss") + "\t[Catch]     There is an error in the regular expression \"%s\"- %s\n" % (instruction.regexp, str(error))
 			return False
 		# Finding all possible matches with the regular expression
 		matches = instruction.regexp.findall(data)

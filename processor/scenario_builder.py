@@ -1,5 +1,3 @@
-from re import compile
-
 class ScenarioBuilder:
 	"""Class for building the Scenario instance from validated contents of the test file"""
 
@@ -63,7 +61,7 @@ class ScenarioBuilder:
 
 	def _make_catch(self, component):
 		"""Builds and returns the Catch instruction of the Scenario instance"""
-		catch = Scenario.Catch(compile(component.attrib["regexp"]), component.attrib["assign_to"])
+		catch = Scenario.Catch(component.attrib["regexp"], component.attrib["assign_to"])
 		if "match" in component.attrib:
 			catch.match = int(component.attrib["match"])
 		return catch
